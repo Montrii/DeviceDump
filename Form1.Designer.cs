@@ -29,7 +29,7 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
-            menuStrip1 = new MenuStrip();
+            menuStripToolbar = new MenuStrip();
             optionsToolStripMenuItem = new ToolStripMenuItem();
             selectDeviceToolStripMenuItem = new ToolStripMenuItem();
             label1 = new Label();
@@ -41,19 +41,21 @@
             labelBytesRead = new Label();
             label4 = new Label();
             labelDeviceUsed = new Label();
-            menuStrip1.SuspendLayout();
+            navigationToolStripMenuItem = new ToolStripMenuItem();
+            readBytesFromDeviceToolStripMenuItem = new ToolStripMenuItem();
+            menuStripToolbar.SuspendLayout();
             SuspendLayout();
             // 
-            // menuStrip1
+            // menuStripToolbar
             // 
-            menuStrip1.BackgroundImageLayout = ImageLayout.None;
-            menuStrip1.Items.AddRange(new ToolStripItem[] { optionsToolStripMenuItem });
-            menuStrip1.Location = new Point(0, 0);
-            menuStrip1.Name = "menuStrip1";
-            menuStrip1.RenderMode = ToolStripRenderMode.System;
-            menuStrip1.Size = new Size(707, 24);
-            menuStrip1.TabIndex = 0;
-            menuStrip1.Text = "menuStrip1";
+            menuStripToolbar.BackgroundImageLayout = ImageLayout.None;
+            menuStripToolbar.Items.AddRange(new ToolStripItem[] { optionsToolStripMenuItem, navigationToolStripMenuItem });
+            menuStripToolbar.Location = new Point(0, 0);
+            menuStripToolbar.Name = "menuStripToolbar";
+            menuStripToolbar.RenderMode = ToolStripRenderMode.System;
+            menuStripToolbar.Size = new Size(707, 24);
+            menuStripToolbar.TabIndex = 0;
+            menuStripToolbar.Text = "menuStrip1";
             // 
             // optionsToolStripMenuItem
             // 
@@ -154,6 +156,20 @@
             labelDeviceUsed.Size = new Size(0, 15);
             labelDeviceUsed.TabIndex = 9;
             // 
+            // navigationToolStripMenuItem
+            // 
+            navigationToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { readBytesFromDeviceToolStripMenuItem });
+            navigationToolStripMenuItem.Name = "navigationToolStripMenuItem";
+            navigationToolStripMenuItem.Size = new Size(77, 20);
+            navigationToolStripMenuItem.Text = "Navigation";
+            // 
+            // readBytesFromDeviceToolStripMenuItem
+            // 
+            readBytesFromDeviceToolStripMenuItem.Name = "readBytesFromDeviceToolStripMenuItem";
+            readBytesFromDeviceToolStripMenuItem.Size = new Size(200, 22);
+            readBytesFromDeviceToolStripMenuItem.Text = "Read Bytes From Device";
+            readBytesFromDeviceToolStripMenuItem.Click += readBytesFromDeviceToolStripMenuItem_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -169,20 +185,20 @@
             Controls.Add(richTextBoxHexDump);
             Controls.Add(labelSelectedPhysicalDevice);
             Controls.Add(label1);
-            Controls.Add(menuStrip1);
+            Controls.Add(menuStripToolbar);
             Icon = (Icon)resources.GetObject("$this.Icon");
-            MainMenuStrip = menuStrip1;
+            MainMenuStrip = menuStripToolbar;
             Name = "Form1";
             Text = "Device Dumper - by Montri";
-            menuStrip1.ResumeLayout(false);
-            menuStrip1.PerformLayout();
+            menuStripToolbar.ResumeLayout(false);
+            menuStripToolbar.PerformLayout();
             ResumeLayout(false);
             PerformLayout();
         }
 
         #endregion
 
-        private MenuStrip menuStrip1;
+        private MenuStrip menuStripToolbar;
         private ToolStripMenuItem optionsToolStripMenuItem;
         private ToolStripMenuItem selectDeviceToolStripMenuItem;
         private Label label1;
@@ -194,5 +210,7 @@
         private Label labelBytesRead;
         private Label label4;
         private Label labelDeviceUsed;
+        private ToolStripMenuItem navigationToolStripMenuItem;
+        private ToolStripMenuItem readBytesFromDeviceToolStripMenuItem;
     }
 }

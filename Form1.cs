@@ -1,7 +1,9 @@
 ﻿using DeviceDump.Classes;
+using DeviceDump.UI;
 using System.Management;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace DeviceDump
 {
@@ -77,7 +79,7 @@ namespace DeviceDump
                 PhysicalDevice currentDevice = item.Tag as PhysicalDevice;
                 currentDevice?.ClosePhysicalDevice();
             }
-                
+
 
             if (sender is ToolStripMenuItem clickedItem &&
                 clickedItem.Tag is PhysicalDevice device)
@@ -90,7 +92,7 @@ namespace DeviceDump
                     // Open the device.
                     OpenClosePhysicalDevice(true, device);
 
-                    richTextBoxHexDump.Text = string.Join(Environment.NewLine, dumper.ReadHexFromDevice(0, 512));
+                    AddDumpsToHexDump(dumper.ReadHexFromDevice(0, 512));
 
                     // Update frontend.
                     UpdateSelectedDevice(device);
@@ -146,6 +148,33 @@ namespace DeviceDump
         }
 
 
+
+
+        // When the 
+        private void readBytesFromDeviceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if(SelectedPhysicalDevice == null) 
+            {
+                MessageBox.Show("No device selected or device is not readable.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            using (var inputForm = new NumberInputForm("Bytes"))
+            {
+                var result = inputForm.ShowDialog();
+
+                if (result == DialogResult.OK && !string.IsNullOrWhiteSpace(inputForm.UserInput))
+                {
+                    ProcessReadBytesInput(inputForm.UserInput);
+                }
+                else
+                {
+                    MessageBox.Show("Input was cancelled or empty.", "Notice", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    inputForm.ShowDialog();
+                }
+            }
+        }
+
         private void UpdateSelectedDevice(PhysicalDevice device)
         {
             SelectedPhysicalDevice = device;
@@ -157,6 +186,59 @@ namespace DeviceDump
 
             labelBytesRead.Text = $"{device.BytesRead:N0} bytes ({PhysicalDevice.FormatBytes(device.BytesRead)})";
             labelBytesRead.Font = new Font(labelBytesRead.Font, FontStyle.Bold);
+        }
+
+
+
+        // Decides if the hex dump should be appended or replaced based on the number of bytes read.
+        private void AddDumpsToHexDump(List<string> newDumps)
+        {
+            if (SelectedPhysicalDevice == null || SelectedPhysicalDevice.BytesRead <= 0)
+            {
+                richTextBoxHexDump.Text = string.Join(Environment.NewLine, newDumps);
+            }
+            else if(SelectedPhysicalDevice != null && SelectedPhysicalDevice.BytesRead > 0)
+            {
+                string text = richTextBoxHexDump.Text;
+                text += "\n";
+                text += string.Join(Environment.NewLine, newDumps);
+
+                richTextBoxHexDump.Text = text;
+            }
+        }
+
+        private void ProcessReadBytesInput(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                MessageBox.Show("Please enter a valid value.", "Input Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                // get the input.
+                ulong bytes = Convert.ToUInt64(value);
+
+                // Open the device.
+                OpenClosePhysicalDevice(true, SelectedPhysicalDevice);
+
+                // Create a new DeviceHexDumper instance.
+                DeviceHexDumper dumper = new DeviceHexDumper(SelectedPhysicalDevice);
+
+                // Read the specified number of bytes from the device.
+                AddDumpsToHexDump(dumper.ReadHexFromDevice(SelectedPhysicalDevice.BytesRead > 0 ? (int)SelectedPhysicalDevice.BytesRead : 0, (int)bytes));
+
+                UpdateSelectedDevice(SelectedPhysicalDevice);
+
+                OpenClosePhysicalDevice(false, SelectedPhysicalDevice);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"An unexpected error occurred: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
         }
     }
 }

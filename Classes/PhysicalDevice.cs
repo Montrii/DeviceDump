@@ -27,7 +27,7 @@ namespace DeviceDump.Classes
         // Reference to the opened file stream for the device.
         private Stream? _fileStream;
 
-        public Stream? FileStream { get => _fileStream; }
+        public Stream? FileStream { get => _fileStream; set => _fileStream = value; }
 
 
         // Number of bytes read from the device.
@@ -74,17 +74,17 @@ namespace DeviceDump.Classes
                 throw new InvalidOperationException("Device path is not set.");
             }
 
-            _fileStream = new FileStream(DevicePath, FileMode.Open, FileAccess.Read);
+            FileStream = new FileStream(DevicePath, FileMode.Open, FileAccess.Read);
         }
 
 
         // Closes the opened PhysicalDevice stream if it is open.
         public void ClosePhysicalDevice()
         {
-            if (_fileStream != null)
+            if (FileStream != null)
             {
-                _fileStream.Dispose();
-                _fileStream = null;
+                FileStream.Dispose();
+                FileStream = null;
             }
         }
 
