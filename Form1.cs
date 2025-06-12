@@ -1,5 +1,6 @@
 ﻿using DeviceDump.Classes;
 using System.Management;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace DeviceDump
@@ -12,9 +13,11 @@ namespace DeviceDump
         // Clicked Device.
         private PhysicalDevice SelectedPhysicalDevice { get; set; }
 
+
         public Form1()
         {
             InitializeComponent();
+
         }
 
 
@@ -89,6 +92,9 @@ namespace DeviceDump
                 try
                 {
                     richTextBoxHexDump.Text = string.Join(Environment.NewLine, dumper.ReadHexFromDevice(0, 512));
+
+                    // Immediately close the device after reading -> so it can be used again.
+                    device.ClosePhysicalDevice();
                 }
                 catch (Exception ex)
                 {

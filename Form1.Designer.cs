@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             menuStrip1 = new MenuStrip();
             optionsToolStripMenuItem = new ToolStripMenuItem();
             selectDeviceToolStripMenuItem = new ToolStripMenuItem();
@@ -60,7 +61,7 @@
             // selectDeviceToolStripMenuItem
             // 
             selectDeviceToolStripMenuItem.Name = "selectDeviceToolStripMenuItem";
-            selectDeviceToolStripMenuItem.Size = new Size(180, 22);
+            selectDeviceToolStripMenuItem.Size = new Size(143, 22);
             selectDeviceToolStripMenuItem.Text = "Select Device";
             selectDeviceToolStripMenuItem.DropDownOpening += SelectDeviceToolStripMenuItem_DropDownOpening;
             // 
@@ -124,6 +125,7 @@
             Controls.Add(labelSelectedPhysicalDevice);
             Controls.Add(label1);
             Controls.Add(menuStrip1);
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MainMenuStrip = menuStrip1;
             Name = "Form1";
             Text = "Device Dumper";
