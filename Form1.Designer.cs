@@ -33,6 +33,7 @@
             selectDeviceToolStripMenuItem = new ToolStripMenuItem();
             label1 = new Label();
             labelSelectedPhysicalDevice = new Label();
+            listBoxHexDump = new ListBox();
             menuStrip1.SuspendLayout();
             SuspendLayout();
             // 
@@ -80,12 +81,22 @@
             labelSelectedPhysicalDevice.TabIndex = 2;
             labelSelectedPhysicalDevice.Text = "none";
             // 
+            // listBoxHexDump
+            // 
+            listBoxHexDump.FormattingEnabled = true;
+            listBoxHexDump.ItemHeight = 15;
+            listBoxHexDump.Location = new Point(9, 121);
+            listBoxHexDump.Name = "listBoxHexDump";
+            listBoxHexDump.Size = new Size(779, 319);
+            listBoxHexDump.TabIndex = 3;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = SystemColors.Control;
             ClientSize = new Size(800, 450);
+            Controls.Add(listBoxHexDump);
             Controls.Add(labelSelectedPhysicalDevice);
             Controls.Add(label1);
             Controls.Add(menuStrip1);
@@ -105,5 +116,6 @@
         private ToolStripMenuItem selectDeviceToolStripMenuItem;
         private Label label1;
         private Label labelSelectedPhysicalDevice;
+        private ListBox listBoxHexDump;
     }
 }

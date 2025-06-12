@@ -70,7 +70,12 @@ namespace DeviceDump
         private void PhysicalDeviceOption_Clicked(object sender, EventArgs e)
         {
             foreach (ToolStripMenuItem item in selectDeviceToolStripMenuItem.DropDownItems)
+            {
                 item.Checked = false;
+                PhysicalDevice currentDevice = item.Tag as PhysicalDevice;
+                currentDevice?.ClosePhysicalDevice();
+            }
+                
 
             if (sender is ToolStripMenuItem clickedItem &&
                 clickedItem.Tag is PhysicalDevice device)
@@ -78,6 +83,7 @@ namespace DeviceDump
                 clickedItem.Checked = true;
 
                 UpdateSelectedDevice(device);
+                device.OpenPhysicalDevice();
             }
         }
 
@@ -85,11 +91,8 @@ namespace DeviceDump
         private void UpdateSelectedDevice(PhysicalDevice device)
         {
             SelectedPhysicalDevice = device;
-
             labelSelectedPhysicalDevice.Text = $"{device.Name}";
             labelSelectedPhysicalDevice.Font = new Font(labelSelectedPhysicalDevice.Font, FontStyle.Bold);
-
-
         }
     }
 }

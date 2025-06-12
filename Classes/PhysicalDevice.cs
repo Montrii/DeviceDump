@@ -23,6 +23,10 @@ namespace DeviceDump.Classes
         public string FirmwareRevision { get; }
         public string PNPDeviceID { get; }
 
+        private Stream? _fileStream;
+
+        public Stream? FileStream { get; }
+
         public PhysicalDevice(ManagementObject drive)
         {
             // Use ?.ToString() ?? "" to avoid nulls
@@ -41,6 +45,32 @@ namespace DeviceDump.Classes
 
             Name = $"{Model} ({DevicePath})";
         }
+
+
+
+        // Opens the PhysicalDevice.
+        public void OpenPhysicalDevice()
+        {
+            if(string.IsNullOrEmpty(DevicePath))
+            {
+                throw new InvalidOperationException("Device path is not set.");
+            }
+
+            _fileStream = new FileStream(DevicePath, FileMode.Open, FileAccess.Read);
+        }
+
+
+        // Closes the opened PhysicalDevice stream if it is open.
+        public void ClosePhysicalDevice()
+        {
+            if (_fileStream != null)
+            {
+                _fileStream.Dispose();
+                _fileStream = null;
+            }
+        }
+
+
 
         public override string ToString() => Name;
     }
