@@ -33,7 +33,9 @@
             selectDeviceToolStripMenuItem = new ToolStripMenuItem();
             label1 = new Label();
             labelSelectedPhysicalDevice = new Label();
-            listBoxHexDump = new ListBox();
+            richTextBoxHexDump = new RichTextBox();
+            label2 = new Label();
+            labelSizeInBytes = new Label();
             menuStrip1.SuspendLayout();
             SuspendLayout();
             // 
@@ -44,7 +46,7 @@
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
             menuStrip1.RenderMode = ToolStripRenderMode.System;
-            menuStrip1.Size = new Size(800, 24);
+            menuStrip1.Size = new Size(707, 24);
             menuStrip1.TabIndex = 0;
             menuStrip1.Text = "menuStrip1";
             // 
@@ -52,13 +54,13 @@
             // 
             optionsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { selectDeviceToolStripMenuItem });
             optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
-            optionsToolStripMenuItem.Size = new Size(61, 20);
-            optionsToolStripMenuItem.Text = "Options";
+            optionsToolStripMenuItem.Size = new Size(43, 20);
+            optionsToolStripMenuItem.Text = "Start";
             // 
             // selectDeviceToolStripMenuItem
             // 
             selectDeviceToolStripMenuItem.Name = "selectDeviceToolStripMenuItem";
-            selectDeviceToolStripMenuItem.Size = new Size(143, 22);
+            selectDeviceToolStripMenuItem.Size = new Size(180, 22);
             selectDeviceToolStripMenuItem.Text = "Select Device";
             selectDeviceToolStripMenuItem.DropDownOpening += SelectDeviceToolStripMenuItem_DropDownOpening;
             // 
@@ -81,22 +83,44 @@
             labelSelectedPhysicalDevice.TabIndex = 2;
             labelSelectedPhysicalDevice.Text = "none";
             // 
-            // listBoxHexDump
+            // richTextBoxHexDump
             // 
-            listBoxHexDump.FormattingEnabled = true;
-            listBoxHexDump.ItemHeight = 15;
-            listBoxHexDump.Location = new Point(9, 121);
-            listBoxHexDump.Name = "listBoxHexDump";
-            listBoxHexDump.Size = new Size(779, 319);
-            listBoxHexDump.TabIndex = 3;
+            richTextBoxHexDump.Font = new Font("Consolas", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            richTextBoxHexDump.Location = new Point(12, 118);
+            richTextBoxHexDump.Name = "richTextBoxHexDump";
+            richTextBoxHexDump.ReadOnly = true;
+            richTextBoxHexDump.Size = new Size(683, 320);
+            richTextBoxHexDump.TabIndex = 3;
+            richTextBoxHexDump.Text = "";
+            // 
+            // label2
+            // 
+            label2.AutoSize = true;
+            label2.Location = new Point(12, 57);
+            label2.Name = "label2";
+            label2.Size = new Size(33, 15);
+            label2.TabIndex = 4;
+            label2.Text = "Size: ";
+            // 
+            // labelSizeInBytes
+            // 
+            labelSizeInBytes.AutoSize = true;
+            labelSizeInBytes.ForeColor = SystemColors.ControlText;
+            labelSizeInBytes.Location = new Point(40, 57);
+            labelSizeInBytes.Name = "labelSizeInBytes";
+            labelSizeInBytes.Size = new Size(13, 15);
+            labelSizeInBytes.TabIndex = 5;
+            labelSizeInBytes.Text = "0";
             // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = SystemColors.Control;
-            ClientSize = new Size(800, 450);
-            Controls.Add(listBoxHexDump);
+            ClientSize = new Size(707, 450);
+            Controls.Add(labelSizeInBytes);
+            Controls.Add(label2);
+            Controls.Add(richTextBoxHexDump);
             Controls.Add(labelSelectedPhysicalDevice);
             Controls.Add(label1);
             Controls.Add(menuStrip1);
@@ -116,6 +140,8 @@
         private ToolStripMenuItem selectDeviceToolStripMenuItem;
         private Label label1;
         private Label labelSelectedPhysicalDevice;
-        private ListBox listBoxHexDump;
+        private RichTextBox richTextBoxHexDump;
+        private Label label2;
+        private Label labelSizeInBytes;
     }
 }

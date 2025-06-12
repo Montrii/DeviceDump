@@ -16,7 +16,7 @@ namespace DeviceDump.Classes
         public string Model { get; }
         public string Manufacturer { get; }
         public string InterfaceType { get; }
-        public ulong Size { get; }
+        public ulong SizeInBytes { get; }
         public string SerialNumber { get; }
         public string MediaType { get; }
         public string Caption { get; }
@@ -25,7 +25,7 @@ namespace DeviceDump.Classes
 
         private Stream? _fileStream;
 
-        public Stream? FileStream { get; }
+        public Stream? FileStream { get => _fileStream; }
 
         public PhysicalDevice(ManagementObject drive)
         {
@@ -41,9 +41,9 @@ namespace DeviceDump.Classes
 
             DevicePath = drive["DeviceID"]?.ToString() ?? string.Empty;
 
-            Size = (ulong)(drive["Size"] ?? 0);
+            SizeInBytes = (ulong)(drive["Size"] ?? 0);
 
-            Name = $"{Model} ({DevicePath})";
+            Name = $"({DevicePath}) {Model}";
         }
 
 
@@ -70,6 +70,22 @@ namespace DeviceDump.Classes
             }
         }
 
+
+
+        #region Static Methods
+        public static string FormatBytes(ulong bytes)
+        {
+            string[] sizes = { "B", "KB", "MB", "GB", "TB", "PB" };
+            double len = bytes;
+            int order = 0;
+            while (len >= 1024 && order < sizes.Length - 1)
+            {
+                order++;
+                len /= 1024;
+            }
+            return $"{len:0.##} {sizes[order]}";
+        }
+        #endregion
 
 
         public override string ToString() => Name;

@@ -84,6 +84,16 @@ namespace DeviceDump
 
                 UpdateSelectedDevice(device);
                 device.OpenPhysicalDevice();
+
+                DeviceHexDumper dumper = new DeviceHexDumper(device);
+                try
+                {
+                    richTextBoxHexDump.Text = string.Join(Environment.NewLine, dumper.ReadHexFromDevice(0, 512));
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error reading device: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 
@@ -93,6 +103,9 @@ namespace DeviceDump
             SelectedPhysicalDevice = device;
             labelSelectedPhysicalDevice.Text = $"{device.Name}";
             labelSelectedPhysicalDevice.Font = new Font(labelSelectedPhysicalDevice.Font, FontStyle.Bold);
+
+            labelSizeInBytes.Text = $"{device.SizeInBytes:N0} bytes ({PhysicalDevice.FormatBytes(device.SizeInBytes)})";
+            labelSizeInBytes.Font = new Font(labelSizeInBytes.Font, FontStyle.Bold);
         }
     }
 }
