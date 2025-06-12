@@ -32,6 +32,8 @@
             menuStripToolbar = new MenuStrip();
             optionsToolStripMenuItem = new ToolStripMenuItem();
             selectDeviceToolStripMenuItem = new ToolStripMenuItem();
+            navigationToolStripMenuItem = new ToolStripMenuItem();
+            readBytesFromDeviceToolStripMenuItem = new ToolStripMenuItem();
             label1 = new Label();
             labelSelectedPhysicalDevice = new Label();
             richTextBoxHexDump = new RichTextBox();
@@ -41,8 +43,6 @@
             labelBytesRead = new Label();
             label4 = new Label();
             labelDeviceUsed = new Label();
-            navigationToolStripMenuItem = new ToolStripMenuItem();
-            readBytesFromDeviceToolStripMenuItem = new ToolStripMenuItem();
             menuStripToolbar.SuspendLayout();
             SuspendLayout();
             // 
@@ -70,6 +70,20 @@
             selectDeviceToolStripMenuItem.Size = new Size(143, 22);
             selectDeviceToolStripMenuItem.Text = "Select Device";
             selectDeviceToolStripMenuItem.DropDownOpening += SelectDeviceToolStripMenuItem_DropDownOpening;
+            // 
+            // navigationToolStripMenuItem
+            // 
+            navigationToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { readBytesFromDeviceToolStripMenuItem });
+            navigationToolStripMenuItem.Name = "navigationToolStripMenuItem";
+            navigationToolStripMenuItem.Size = new Size(47, 20);
+            navigationToolStripMenuItem.Text = "Tools";
+            // 
+            // readBytesFromDeviceToolStripMenuItem
+            // 
+            readBytesFromDeviceToolStripMenuItem.Name = "readBytesFromDeviceToolStripMenuItem";
+            readBytesFromDeviceToolStripMenuItem.Size = new Size(200, 22);
+            readBytesFromDeviceToolStripMenuItem.Text = "Read Bytes From Device";
+            readBytesFromDeviceToolStripMenuItem.Click += readBytesFromDeviceToolStripMenuItem_Click;
             // 
             // label1
             // 
@@ -155,20 +169,6 @@
             labelDeviceUsed.Name = "labelDeviceUsed";
             labelDeviceUsed.Size = new Size(0, 15);
             labelDeviceUsed.TabIndex = 9;
-            // 
-            // navigationToolStripMenuItem
-            // 
-            navigationToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { readBytesFromDeviceToolStripMenuItem });
-            navigationToolStripMenuItem.Name = "navigationToolStripMenuItem";
-            navigationToolStripMenuItem.Size = new Size(77, 20);
-            navigationToolStripMenuItem.Text = "Navigation";
-            // 
-            // readBytesFromDeviceToolStripMenuItem
-            // 
-            readBytesFromDeviceToolStripMenuItem.Name = "readBytesFromDeviceToolStripMenuItem";
-            readBytesFromDeviceToolStripMenuItem.Size = new Size(200, 22);
-            readBytesFromDeviceToolStripMenuItem.Text = "Read Bytes From Device";
-            readBytesFromDeviceToolStripMenuItem.Click += readBytesFromDeviceToolStripMenuItem_Click;
             // 
             // Form1
             // 

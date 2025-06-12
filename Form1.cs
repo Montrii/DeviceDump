@@ -159,11 +159,15 @@ namespace DeviceDump
                 return;
             }
 
-            using (var inputForm = new NumberInputForm("Bytes"))
+            // Only allow input of full bytes.
+            using (var inputForm = new NumberInputForm("Bytes", "Only full amount of bytes are allowed.", value =>
+            {
+                return value % 8 == 0;
+            }))
             {
                 var result = inputForm.ShowDialog();
 
-                if (result == DialogResult.OK && !string.IsNullOrWhiteSpace(inputForm.UserInput))
+                if (result == DialogResult.OK)
                 {
                     ProcessReadBytesInput(inputForm.UserInput);
                 }
@@ -207,13 +211,8 @@ namespace DeviceDump
             }
         }
 
-        private void ProcessReadBytesInput(string value)
+        private void ProcessReadBytesInput(ulong value)
         {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                MessageBox.Show("Please enter a valid value.", "Input Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
 
             try
             {
