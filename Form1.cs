@@ -13,7 +13,6 @@ namespace DeviceDump
         // Clicked Device.
         private PhysicalDevice SelectedPhysicalDevice { get; set; }
 
-
         public Form1()
         {
             InitializeComponent();
@@ -85,20 +84,63 @@ namespace DeviceDump
             {
                 clickedItem.Checked = true;
 
-                UpdateSelectedDevice(device);
-                device.OpenPhysicalDevice();
-
                 DeviceHexDumper dumper = new DeviceHexDumper(device);
                 try
                 {
+                    // Open the device.
+                    OpenClosePhysicalDevice(true, device);
+
                     richTextBoxHexDump.Text = string.Join(Environment.NewLine, dumper.ReadHexFromDevice(0, 512));
 
+                    // Update frontend.
+                    UpdateSelectedDevice(device);
+
                     // Immediately close the device after reading -> so it can be used again.
-                    device.ClosePhysicalDevice();
+                    OpenClosePhysicalDevice(false, SelectedPhysicalDevice);
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show($"Error reading device: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        // Function to handle UI updating and device open/close
+        public void OpenClosePhysicalDevice(bool open, PhysicalDevice device)
+        {
+
+            if (open)
+            {
+                try
+                {
+                    device.OpenPhysicalDevice();
+                    labelDeviceUsed.ForeColor = Color.Green;
+                    labelDeviceUsed.Font = new Font(labelDeviceUsed.Font, FontStyle.Bold);
+                    labelDeviceUsed.Text = "Device is open (accessed).";
+                }
+                catch (Exception ex)
+                {
+                    labelDeviceUsed.ForeColor = Color.Red;
+                    labelDeviceUsed.Font = new Font(labelDeviceUsed.Font, FontStyle.Bold);
+                    labelDeviceUsed.Text = "Failed to open device.";
+                    MessageBox.Show($"Error opening device: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            else
+            {
+                try
+                {
+                    device.ClosePhysicalDevice();
+                    labelDeviceUsed.ForeColor = Color.Red;
+                    labelDeviceUsed.Font = new Font(labelDeviceUsed.Font, FontStyle.Bold);
+                    labelDeviceUsed.Text = "Device is closed.";
+                }
+                catch (Exception ex)
+                {
+                    labelDeviceUsed.ForeColor = Color.Red;
+                    labelDeviceUsed.Font = new Font(labelDeviceUsed.Font, FontStyle.Bold);
+                    labelDeviceUsed.Text = "Failed to close device.";
+                    MessageBox.Show($"Error closing device: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
@@ -112,6 +154,9 @@ namespace DeviceDump
 
             labelSizeInBytes.Text = $"{device.SizeInBytes:N0} bytes ({PhysicalDevice.FormatBytes(device.SizeInBytes)})";
             labelSizeInBytes.Font = new Font(labelSizeInBytes.Font, FontStyle.Bold);
+
+            labelBytesRead.Text = $"{device.BytesRead:N0} bytes ({PhysicalDevice.FormatBytes(device.BytesRead)})";
+            labelBytesRead.Font = new Font(labelBytesRead.Font, FontStyle.Bold);
         }
     }
 }

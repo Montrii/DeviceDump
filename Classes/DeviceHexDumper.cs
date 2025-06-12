@@ -29,7 +29,16 @@ namespace DeviceDump.Classes
 
             // Seek to the specified offset - Read bytes into the buffer
             _device.FileStream.Seek(offset, SeekOrigin.Begin);
-            _device.FileStream.Read(buffer, 0, length);
+            int bytesRead = _device.FileStream.Read(buffer, 0, length);
+
+            if(offset <= 0)
+            {
+                _device.BytesRead = Convert.ToUInt64(bytesRead);
+            } 
+            else
+            {
+                _device.BytesRead += Convert.ToUInt64(bytesRead);
+            }
 
             return HexDump(buffer, bytesPerLine);
         }

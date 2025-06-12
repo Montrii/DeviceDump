@@ -23,9 +23,27 @@ namespace DeviceDump.Classes
         public string FirmwareRevision { get; }
         public string PNPDeviceID { get; }
 
+
+        // Reference to the opened file stream for the device.
         private Stream? _fileStream;
 
         public Stream? FileStream { get => _fileStream; }
+
+
+        // Number of bytes read from the device.
+        private ulong _bytesRead;
+
+        public ulong BytesRead
+        {
+            get => _bytesRead;
+            set
+            {
+                if (value < 0)
+                    throw new ArgumentOutOfRangeException(nameof(value), "Bytes read cannot be negative.");
+                _bytesRead = value;
+            }
+        }
+
 
         public PhysicalDevice(ManagementObject drive)
         {

@@ -37,6 +37,10 @@
             richTextBoxHexDump = new RichTextBox();
             label2 = new Label();
             labelSizeInBytes = new Label();
+            label3 = new Label();
+            labelBytesRead = new Label();
+            label4 = new Label();
+            labelDeviceUsed = new Label();
             menuStrip1.SuspendLayout();
             SuspendLayout();
             // 
@@ -68,7 +72,7 @@
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(12, 33);
+            label1.Location = new Point(12, 30);
             label1.Name = "label1";
             label1.Size = new Size(91, 15);
             label1.TabIndex = 1;
@@ -78,7 +82,7 @@
             // 
             labelSelectedPhysicalDevice.AutoSize = true;
             labelSelectedPhysicalDevice.ForeColor = SystemColors.ControlText;
-            labelSelectedPhysicalDevice.Location = new Point(101, 33);
+            labelSelectedPhysicalDevice.Location = new Point(101, 30);
             labelSelectedPhysicalDevice.Name = "labelSelectedPhysicalDevice";
             labelSelectedPhysicalDevice.Size = new Size(34, 15);
             labelSelectedPhysicalDevice.TabIndex = 2;
@@ -97,21 +101,58 @@
             // label2
             // 
             label2.AutoSize = true;
-            label2.Location = new Point(12, 57);
+            label2.Location = new Point(12, 49);
             label2.Name = "label2";
-            label2.Size = new Size(33, 15);
+            label2.Size = new Size(58, 15);
             label2.TabIndex = 4;
-            label2.Text = "Size: ";
+            label2.Text = "Total size:";
             // 
             // labelSizeInBytes
             // 
             labelSizeInBytes.AutoSize = true;
             labelSizeInBytes.ForeColor = SystemColors.ControlText;
-            labelSizeInBytes.Location = new Point(40, 57);
+            labelSizeInBytes.Location = new Point(70, 49);
             labelSizeInBytes.Name = "labelSizeInBytes";
             labelSizeInBytes.Size = new Size(13, 15);
             labelSizeInBytes.TabIndex = 5;
             labelSizeInBytes.Text = "0";
+            // 
+            // label3
+            // 
+            label3.AutoSize = true;
+            label3.Location = new Point(12, 69);
+            label3.Name = "label3";
+            label3.Size = new Size(64, 15);
+            label3.TabIndex = 6;
+            label3.Text = "Bytes read:";
+            // 
+            // labelBytesRead
+            // 
+            labelBytesRead.AutoSize = true;
+            labelBytesRead.ForeColor = SystemColors.ControlText;
+            labelBytesRead.Location = new Point(74, 69);
+            labelBytesRead.Name = "labelBytesRead";
+            labelBytesRead.Size = new Size(13, 15);
+            labelBytesRead.TabIndex = 7;
+            labelBytesRead.Text = "0";
+            // 
+            // label4
+            // 
+            label4.AutoSize = true;
+            label4.Location = new Point(12, 90);
+            label4.Name = "label4";
+            label4.Size = new Size(94, 15);
+            label4.TabIndex = 8;
+            label4.Text = "Device used? -> ";
+            // 
+            // labelDeviceUsed
+            // 
+            labelDeviceUsed.AutoSize = true;
+            labelDeviceUsed.ForeColor = SystemColors.ControlText;
+            labelDeviceUsed.Location = new Point(100, 90);
+            labelDeviceUsed.Name = "labelDeviceUsed";
+            labelDeviceUsed.Size = new Size(0, 15);
+            labelDeviceUsed.TabIndex = 9;
             // 
             // Form1
             // 
@@ -119,6 +160,10 @@
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = SystemColors.Control;
             ClientSize = new Size(707, 450);
+            Controls.Add(labelDeviceUsed);
+            Controls.Add(label4);
+            Controls.Add(labelBytesRead);
+            Controls.Add(label3);
             Controls.Add(labelSizeInBytes);
             Controls.Add(label2);
             Controls.Add(richTextBoxHexDump);
@@ -128,7 +173,7 @@
             Icon = (Icon)resources.GetObject("$this.Icon");
             MainMenuStrip = menuStrip1;
             Name = "Form1";
-            Text = "Device Dumper";
+            Text = "Device Dumper - by Montri";
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();
             ResumeLayout(false);
@@ -145,5 +190,9 @@
         private RichTextBox richTextBoxHexDump;
         private Label label2;
         private Label labelSizeInBytes;
+        private Label label3;
+        private Label labelBytesRead;
+        private Label label4;
+        private Label labelDeviceUsed;
     }
 }
