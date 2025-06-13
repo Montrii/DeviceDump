@@ -43,6 +43,7 @@
             labelBytesRead = new Label();
             label4 = new Label();
             labelDeviceUsed = new Label();
+            jumpToAddressOnDeviceToolStripMenuItem = new ToolStripMenuItem();
             menuStripToolbar.SuspendLayout();
             SuspendLayout();
             // 
@@ -73,7 +74,7 @@
             // 
             // navigationToolStripMenuItem
             // 
-            navigationToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { readBytesFromDeviceToolStripMenuItem });
+            navigationToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { readBytesFromDeviceToolStripMenuItem, jumpToAddressOnDeviceToolStripMenuItem });
             navigationToolStripMenuItem.Name = "navigationToolStripMenuItem";
             navigationToolStripMenuItem.Size = new Size(47, 20);
             navigationToolStripMenuItem.Text = "Tools";
@@ -81,7 +82,7 @@
             // readBytesFromDeviceToolStripMenuItem
             // 
             readBytesFromDeviceToolStripMenuItem.Name = "readBytesFromDeviceToolStripMenuItem";
-            readBytesFromDeviceToolStripMenuItem.Size = new Size(200, 22);
+            readBytesFromDeviceToolStripMenuItem.Size = new Size(217, 22);
             readBytesFromDeviceToolStripMenuItem.Text = "Read Bytes From Device";
             readBytesFromDeviceToolStripMenuItem.Click += readBytesFromDeviceToolStripMenuItem_Click;
             // 
@@ -170,6 +171,13 @@
             labelDeviceUsed.Size = new Size(0, 15);
             labelDeviceUsed.TabIndex = 9;
             // 
+            // jumpToAddressOnDeviceToolStripMenuItem
+            // 
+            jumpToAddressOnDeviceToolStripMenuItem.Name = "jumpToAddressOnDeviceToolStripMenuItem";
+            jumpToAddressOnDeviceToolStripMenuItem.Size = new Size(217, 22);
+            jumpToAddressOnDeviceToolStripMenuItem.Text = "Jump to Address on Device";
+            jumpToAddressOnDeviceToolStripMenuItem.Click += jumpToAddressOnDeviceToolStripMenuItem_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -212,5 +220,6 @@
         private Label labelDeviceUsed;
         private ToolStripMenuItem navigationToolStripMenuItem;
         private ToolStripMenuItem readBytesFromDeviceToolStripMenuItem;
+        private ToolStripMenuItem jumpToAddressOnDeviceToolStripMenuItem;
     }
 }

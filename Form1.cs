@@ -15,13 +15,65 @@ namespace DeviceDump
         // Clicked Device.
         private PhysicalDevice SelectedPhysicalDevice { get; set; }
 
+
+        #region Constructor
         public Form1()
         {
             InitializeComponent();
 
         }
+        #endregion
 
 
+        #region Click Events
+
+        // When "Jump to Address on Device" was clicked.
+        private void jumpToAddressOnDeviceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+
+            if (SelectedPhysicalDevice == null)
+            {
+                MessageBox.Show("No device selected or device is not readable.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // Only allow input of full bytes.
+            using (var inputForm = new HexInputForm("Enter Address", "Only hex addresses are allowed.", value =>
+            {
+                string trimmed = value.Trim();
+
+                // Validate hex format (e.g., "0x1A3" or "1A3")
+                if (System.Text.RegularExpressions.Regex.IsMatch(trimmed, @"^(0x)?[0-9A-Fa-f]+$"))
+                {
+                    try
+                    {
+                        // Try parsing it just to ensure it's a valid number
+                        Convert.ToInt32(trimmed, 16);
+                        return true;
+                    }
+                    catch
+                    {
+                        return false;
+                    }
+                }
+
+                return false;
+            }))
+            {
+                var result = inputForm.ShowDialog();
+
+                if (result == DialogResult.OK)
+                {
+                    JumpToAddressOnDeviceToolStripMenuItem(SelectedPhysicalDevice, inputForm.UserInput);
+                }
+                else
+                {
+                    MessageBox.Show("Input was cancelled or empty.", "Notice", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    inputForm.ShowDialog();
+                }
+            }
+
+        }
 
 
         // Event handler that refreshes the menu items just before it opens
@@ -68,45 +120,6 @@ namespace DeviceDump
         }
 
 
-
-
-        // When a specific device is clicked.
-        private void PhysicalDeviceOption_Clicked(object sender, EventArgs e)
-        {
-            foreach (ToolStripMenuItem item in selectDeviceToolStripMenuItem.DropDownItems)
-            {
-                item.Checked = false;
-                PhysicalDevice currentDevice = item.Tag as PhysicalDevice;
-                currentDevice?.ClosePhysicalDevice();
-            }
-
-
-            if (sender is ToolStripMenuItem clickedItem &&
-                clickedItem.Tag is PhysicalDevice device)
-            {
-                clickedItem.Checked = true;
-
-                DeviceHexDumper dumper = new DeviceHexDumper(device);
-                try
-                {
-                    // Open the device.
-                    OpenClosePhysicalDevice(true, device);
-
-                    AddDumpsToHexDump(dumper.ReadHexFromDevice(0, 512));
-
-                    // Update frontend.
-                    UpdateSelectedDevice(device);
-
-                    // Immediately close the device after reading -> so it can be used again.
-                    OpenClosePhysicalDevice(false, SelectedPhysicalDevice);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Error reading device: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
-        }
-
         // Function to handle UI updating and device open/close
         public void OpenClosePhysicalDevice(bool open, PhysicalDevice device)
         {
@@ -146,21 +159,136 @@ namespace DeviceDump
                 }
             }
         }
+        #endregion
+
+        #region Private Methods
+        private void JumpToAddressOnDeviceToolStripMenuItem(PhysicalDevice device, string addressHex)
+        {
+            // Normalize and validate input
+            string normalizedInput = addressHex.Trim().ToLower().Replace("0x", "");
+            if (!int.TryParse(normalizedInput, System.Globalization.NumberStyles.HexNumber, null, out int targetAddress))
+            {
+                MessageBox.Show($"Invalid hex address: {addressHex}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            const int bytesPerLine = 16;
+            int lineStartAddress = targetAddress & ~(bytesPerLine - 1);
+            int byteOffsetInLine = targetAddress - lineStartAddress;
+
+            // Split the hex dump into lines
+            List<string> lines = richTextBoxHexDump.Text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None).ToList();
+            int currentCharIndex = 0;
+
+            foreach (string line in lines)
+            {
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    currentCharIndex += line.Length + 1;
+                    continue;
+                }
+
+                string[] parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length < 2)
+                {
+                    currentCharIndex += line.Length + 1;
+                    continue;
+                }
+
+                if (int.TryParse(parts[0], System.Globalization.NumberStyles.HexNumber, null, out int lineAddress))
+                {
+                    if (lineAddress == lineStartAddress)
+                    {
+                        if (byteOffsetInLine == 0)
+                        {
+                            // If address is exactly at line start, highlight whole line
+                            richTextBoxHexDump.Select(currentCharIndex, line.Length);
+                            richTextBoxHexDump.ScrollToCaret();
+                            MessageBox.Show($"Found full line for address '{addressHex}'.", "Address Found", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            return;
+                        }
+                        else
+                        {
+                            // Highlight just the target byte (2-digit hex)
+                            int byteCharIndexInLine = 0;
+                            int bytesFound = 0;
+
+                            for (int i = 1; i < parts.Length && bytesFound < byteOffsetInLine; i++)
+                            {
+                                byteCharIndexInLine += parts[i].Length + 1;
+                                bytesFound++;
+                            }
+
+                            if (byteOffsetInLine + 1 < parts.Length)
+                            {
+                                int byteTextLength = parts[byteOffsetInLine + 1].Length;
+                                int startIndex = currentCharIndex + parts[0].Length + 1 + byteCharIndexInLine;
+
+                                richTextBoxHexDump.Select(startIndex, byteTextLength);
+                                richTextBoxHexDump.ScrollToCaret();
+                                MessageBox.Show($"Found byte at address '{addressHex}'.", "Byte Found", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                return;
+                            }
+                        }
+                    }
+                }
+
+                currentCharIndex += line.Length + 1; // Account for newline
+            }
+
+            MessageBox.Show($"Address {addressHex} not found in hex dump.", "Address Not Found", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
 
 
 
+        // When a specific device is clicked.
+        private void PhysicalDeviceOption_Clicked(object sender, EventArgs e)
+        {
+            foreach (ToolStripMenuItem item in selectDeviceToolStripMenuItem.DropDownItems)
+            {
+                item.Checked = false;
+                PhysicalDevice currentDevice = item.Tag as PhysicalDevice;
+                currentDevice?.ClosePhysicalDevice();
+            }
 
-        // When the 
+
+            if (sender is ToolStripMenuItem clickedItem &&
+                clickedItem.Tag is PhysicalDevice device)
+            {
+                clickedItem.Checked = true;
+
+                DeviceHexDumper dumper = new DeviceHexDumper(device);
+                try
+                {
+                    // Open the device.
+                    OpenClosePhysicalDevice(true, device);
+
+                    AddDumpsToHexDump(dumper.ReadHexFromDevice(0, 512));
+
+                    // Update frontend.
+                    UpdateSelectedDevice(device);
+
+                    // Immediately close the device after reading -> so it can be used again.
+                    OpenClosePhysicalDevice(false, SelectedPhysicalDevice);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error reading device: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        // When the "Read Bytes from Device" Item is clicked.
         private void readBytesFromDeviceToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if(SelectedPhysicalDevice == null) 
+            if (SelectedPhysicalDevice == null)
             {
                 MessageBox.Show("No device selected or device is not readable.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
             // Only allow input of full bytes.
-            using (var inputForm = new NumberInputForm("Bytes", "Only full amount of bytes are allowed.", value =>
+            using (var inputForm = new NumberInputForm("Enter Bytes", "Only full amount of bytes are allowed.", value =>
             {
                 return value % 8 == 0;
             }))
@@ -201,7 +329,7 @@ namespace DeviceDump
             {
                 richTextBoxHexDump.Text = string.Join(Environment.NewLine, newDumps);
             }
-            else if(SelectedPhysicalDevice != null && SelectedPhysicalDevice.BytesRead > 0)
+            else if (SelectedPhysicalDevice != null && SelectedPhysicalDevice.BytesRead > 0)
             {
                 string text = richTextBoxHexDump.Text;
                 text += "\n";
@@ -239,5 +367,7 @@ namespace DeviceDump
             }
 
         }
+        #endregion
+
     }
 }

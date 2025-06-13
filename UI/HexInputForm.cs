@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 namespace DeviceDump.UI
 {
 
-    public class NumberInputForm : Form
+    public class HexInputForm : Form
     {
-        public ulong UserInput { get; private set; }
+        public string UserInput { get; private set; }
 
-        public NumberInputForm(string labelText, string description, Func<ulong, bool>? validate = null)
+        public HexInputForm(string labelText, string description, Func<string, bool>? validate = null)
         {
             if (validate == null)
                 throw new ArgumentNullException(nameof(validate));
@@ -61,7 +61,7 @@ namespace DeviceDump.UI
             inputBox.TextChanged += (s, e) =>
             {
                 string text = inputBox.Text;
-                if (ulong.TryParse(text, out ulong val) && validate(val))
+                if (validate(text))
                 {
                     okButton.Enabled = true;
                 }
@@ -73,15 +73,22 @@ namespace DeviceDump.UI
 
             inputBox.KeyPress += (s, e) =>
             {
-                if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
+                inputBox.KeyPress += (s, e) =>
                 {
-                    e.Handled = true;
-                }
+                    if (!char.IsControl(e.KeyChar) &&
+                        !char.IsDigit(e.KeyChar) &&
+                        !(e.KeyChar >= 'a' && e.KeyChar <= 'f') &&
+                        !(e.KeyChar >= 'A' && e.KeyChar <= 'F') &&
+                        !(e.KeyChar == 'x' || e.KeyChar == 'X')) // allow typing "0x"
+                    {
+                        e.Handled = true;
+                    }
+                };
             };
 
             okButton.Click += (s, e) =>
             {
-                UserInput = ulong.Parse(inputBox.Text);
+                UserInput = inputBox.Text;
                 this.Close();
             };
 
