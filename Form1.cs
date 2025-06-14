@@ -169,7 +169,6 @@ namespace DeviceDump
             if (SelectedPhysicalDevice == null)
                 return;
 
-            // No selection? Clear tooltip and exit
             if (richTextBoxHexDump.SelectionLength == 0)
             {
                 byteToolTip.SetToolTip(richTextBoxHexDump, "");
@@ -181,7 +180,6 @@ namespace DeviceDump
             int firstCharIndex = richTextBoxHexDump.GetFirstCharIndexFromLine(line);
             int column = index - firstCharIndex;
 
-            // Safety check
             if (line < 0 || line >= richTextBoxHexDump.Lines.Length)
                 return;
 
@@ -189,7 +187,6 @@ namespace DeviceDump
             if (lineText.Length < 8)
                 return;
 
-            // Parse line address
             string addressPrefix = lineText.Substring(0, 8);
             if (!int.TryParse(addressPrefix, System.Globalization.NumberStyles.HexNumber, null, out int baseAddress))
                 return;
@@ -205,7 +202,6 @@ namespace DeviceDump
 
             if (index >= selectionStartIndex && index <= selectionEndIndex)
             {
-                // Get line/column of selection start
                 int startLine = richTextBoxHexDump.GetLineFromCharIndex(selectionStartIndex);
                 int startLineChar = richTextBoxHexDump.GetFirstCharIndexFromLine(startLine);
                 int startCol = selectionStartIndex - startLineChar;
@@ -227,7 +223,6 @@ namespace DeviceDump
 
                 int startAddress = startBaseAddress + startByteIndex;
 
-                // Get line/column of selection end
                 int endLine = richTextBoxHexDump.GetLineFromCharIndex(selectionEndIndex);
                 int endLineChar = richTextBoxHexDump.GetFirstCharIndexFromLine(endLine);
                 int endCol = selectionEndIndex - endLineChar;
@@ -249,15 +244,43 @@ namespace DeviceDump
 
                 int endAddress = endBaseAddress + endByteIndex;
 
-                // Tooltip text: range or single
-                if (startAddress == endAddress)
+                int length = endAddress - startAddress + 1;
+                byte[] selectedBytes = GetSelectedBytesFromHexDump(startAddress, length);
+
+                if (selectedBytes == null || selectedBytes.Length != length)
+                    return;
+
+                string tooltip = (startAddress == endAddress)
+                    ? $"Address: 0x{startAddress:X8}\n"
+                    : $"Range: 0x{startAddress:X8} - 0x{endAddress:X8}\n";
+
+                switch (length)
                 {
-                    byteToolTip.SetToolTip(richTextBoxHexDump, $"Address: 0x{startAddress:X8}");
+                    case 1:
+                        tooltip += $"Bool: {Convert.ToBoolean(selectedBytes[0])}\n";
+                        tooltip += $"Char: {(char)selectedBytes[0]}\n";
+                        break;
+                    case 2:
+                        short s = BitConverter.ToInt16(selectedBytes, 0);
+                        tooltip += $"Short: {s}\n";
+                        tooltip += $"String: {System.Text.Encoding.ASCII.GetString(selectedBytes) ?? "null"}\n";
+                        break;
+                    case 4:
+                        int i = BitConverter.ToInt32(selectedBytes, 0);
+                        tooltip += $"Int: {i}\n";
+                        tooltip += $"String: {System.Text.Encoding.ASCII.GetString(selectedBytes) ?? "null"}\n";
+                        break;
+                    case 8:
+                        long l = BitConverter.ToInt64(selectedBytes, 0);
+                        tooltip += $"Long: {l}\n";
+                        tooltip += $"String: {System.Text.Encoding.ASCII.GetString(selectedBytes) ?? "null"}\n";
+                        break;
+                    default:
+                        tooltip += $"String: {System.Text.Encoding.ASCII.GetString(selectedBytes) ?? "null"}\n";
+                        break;
                 }
-                else
-                {
-                    byteToolTip.SetToolTip(richTextBoxHexDump, $"Range: 0x{startAddress:X8} - 0x{endAddress:X8}");
-                }
+
+                byteToolTip.SetToolTip(richTextBoxHexDump, tooltip.TrimEnd());
             }
             else
             {
@@ -268,6 +291,44 @@ namespace DeviceDump
         #endregion
 
         #region Private Methods
+
+
+        // Helper method to extract byte array from hex dump based on address
+        private byte[] GetSelectedBytesFromHexDump(int startAddress, int length)
+        {
+            byte[] result = new byte[length];
+            int resultIndex = 0;
+
+            foreach (var line in richTextBoxHexDump.Lines)
+            {
+                if (line.Length < 9)
+                    continue;
+
+                if (!int.TryParse(line.Substring(0, 8), System.Globalization.NumberStyles.HexNumber, null, out int lineAddress))
+                    continue;
+
+                if (startAddress >= lineAddress + 16 || startAddress + length <= lineAddress)
+                    continue; // Skip lines not within range
+
+                string[] parts = line.Substring(9).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                for (int i = 0; i < parts.Length && i < 16; i++)
+                {
+                    int currentAddress = lineAddress + i;
+                    if (currentAddress >= startAddress && currentAddress < startAddress + length)
+                    {
+                        if (byte.TryParse(parts[i], System.Globalization.NumberStyles.HexNumber, null, out byte b))
+                        {
+                            result[resultIndex++] = b;
+                            if (resultIndex == length)
+                                return result;
+                        }
+                    }
+                }
+            }
+
+            return resultIndex == length ? result : null;
+        }
+
         private void JumpToAddressOnDeviceToolStripMenuItem(PhysicalDevice device, string addressHex)
         {
             // Normalize and validate input
