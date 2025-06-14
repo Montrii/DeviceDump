@@ -11,37 +11,65 @@ namespace DeviceDump.Classes
     public sealed class DeviceHexDumper
     {
         private PhysicalDevice _device;
-        
+
+        private readonly string _outputFilePath;
+
         public DeviceHexDumper(PhysicalDevice device)
         {
-            _device = device;
+            _device = device ?? throw new ArgumentNullException(nameof(device));
+
+            if (string.IsNullOrWhiteSpace(_device.DevicePath))
+                throw new ArgumentException("DevicePath must be a valid non-empty string.");
+
+            // Generate a safe filename from the device path
+            string safeFileName = Path.GetFileName(_device.DevicePath)
+                .Replace(Path.DirectorySeparatorChar, '_')
+                .Replace(Path.AltDirectorySeparatorChar, '_');
+
+            // Default file path in temp directory
+            _outputFilePath = Path.Combine(Path.GetTempPath(), $"{safeFileName}_hexdump.txt");
         }
 
 
 
         // Returns a string with the specified amount of bytes read from the device in hex format.
-        public List<string> ReadHexFromDevice(int offset, int length, int bytesPerLine = 16)
+        // Reads from the device and appends hex dump to the file. Returns the file path.
+        public string ReadHexFromDevice(bool createNewFile, int offset, int length, int bytesPerLine = 16)
         {
             if (_device?.FileStream == null || !_device.FileStream.CanRead)
                 throw new InvalidOperationException("Device stream is not open or not readable.");
 
             byte[] buffer = new byte[length];
 
-            // Seek to the specified offset - Read bytes into the buffer
             _device.FileStream.Seek(offset, SeekOrigin.Begin);
             int bytesRead = _device.FileStream.Read(buffer, 0, length);
-            List<string> dump = HexDump(buffer, bytesPerLine);
+
             if (offset <= 0)
             {
                 _device.BytesRead = Convert.ToUInt64(bytesRead);
-            } 
+            }
             else
             {
                 _device.BytesRead += Convert.ToUInt64(bytesRead);
             }
 
-            return dump;
+            List<string> dump = HexDump(buffer, bytesPerLine);
+
+            if (createNewFile)
+            {
+                // Overwrite the file with the new dump
+                File.WriteAllLines(_outputFilePath, dump);
+            }
+            else
+            {
+                // Append to the existing file
+                File.AppendAllLines(_outputFilePath, dump);
+            }
+
+            return _outputFilePath;
         }
+
+
 
 
         #region Private Methods

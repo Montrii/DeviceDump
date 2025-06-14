@@ -4,6 +4,7 @@ using System.Management;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using Timer = System.Windows.Forms.Timer;
 
 namespace DeviceDump
 {
@@ -18,11 +19,22 @@ namespace DeviceDump
 
         private ToolTip byteToolTip;
 
+
+        private Timer tooltipTimer;
+        private int lastSelectionStart = -1;
+        private int lastSelectionLength = -1;
+        private Point lastMouseLocation = Point.Empty;
+        private const int TooltipDelayMs = 150;
+
         #region Constructor
         public Form1()
         {
             InitializeComponent();
             byteToolTip = new ToolTip();
+
+            tooltipTimer = new Timer();
+            tooltipTimer.Interval = TooltipDelayMs;
+            tooltipTimer.Tick += TooltipTimer_Tick;
         }
         #endregion
 
@@ -163,20 +175,24 @@ namespace DeviceDump
         }
 
 
-        // Yes - this is ChatGPT code.
-        private void richTextBoxHexDump_MouseMove(object sender, MouseEventArgs e)
+        private void TooltipTimer_Tick(object sender, EventArgs e)
         {
-            if (SelectedPhysicalDevice == null)
-                return;
+            tooltipTimer.Stop(); // Stop the timer until next MouseMove
 
-            if (richTextBoxHexDump.SelectionLength == 0)
+            // Run your existing tooltip logic here, but ensure it's fast
+            ShowHexDumpTooltip(lastSelectionStart, lastSelectionLength);
+        }
+
+
+        private void ShowHexDumpTooltip(int selectionStartIndex, int selectionLength)
+        {
+            if (SelectedPhysicalDevice == null || selectionLength == 0)
             {
                 byteToolTip.SetToolTip(richTextBoxHexDump, "");
                 return;
             }
 
-            int selectionStartIndex = richTextBoxHexDump.SelectionStart;
-            int selectionEndIndex = selectionStartIndex + richTextBoxHexDump.SelectionLength - 1;
+            int selectionEndIndex = selectionStartIndex + selectionLength - 1;
 
             int startLine = richTextBoxHexDump.GetLineFromCharIndex(selectionStartIndex);
             int endLine = richTextBoxHexDump.GetLineFromCharIndex(selectionEndIndex);
@@ -184,28 +200,23 @@ namespace DeviceDump
             if (startLine < 0 || endLine >= richTextBoxHexDump.Lines.Length)
                 return;
 
-            // Check if selection is within address or ASCII area for both start and end
+
             if (IsInNonHexRegion(selectionStartIndex) || IsInNonHexRegion(selectionEndIndex))
             {
                 byteToolTip.SetToolTip(richTextBoxHexDump, "");
                 return;
             }
 
-            // Compute byte address
             int startByteAddr = GetByteAddressFromCharIndex(selectionStartIndex);
             int endByteAddr = GetByteAddressFromCharIndex(selectionEndIndex);
             if (startByteAddr == -1 || endByteAddr == -1)
                 return;
 
-            // Count actual hex byte pairs in selection range (ignoring spaces)
             int length = CountHexBytesInSelection(selectionStartIndex, selectionEndIndex);
             if (length <= 0)
                 return;
 
-            if (length <= 0)
-                return;
-
-            byte[] selectedBytes = GetSelectedBytesFromHexDump(startByteAddr, length);
+            byte[] selectedBytes = GetSelectedBytesFromHexDump(startByteAddr, length, startLine, endLine);
             if (selectedBytes == null || selectedBytes.Length != length)
                 return;
 
@@ -238,9 +249,45 @@ namespace DeviceDump
 
             byteToolTip.SetToolTip(richTextBoxHexDump, tooltip.TrimEnd());
         }
+
+
+
+
+
+
+        // Yes - this is ChatGPT code.
+        private void richTextBoxHexDump_MouseMove(object sender, MouseEventArgs e)
+        {
+
+            // Record current state
+            Point mousePos = e.Location;
+            int selectionStart = richTextBoxHexDump.SelectionStart;
+            int selectionLength = richTextBoxHexDump.SelectionLength;
+
+            // Only re-trigger if something actually changed
+            if (selectionStart != lastSelectionStart ||
+                selectionLength != lastSelectionLength ||
+                mousePos != lastMouseLocation)
+            {
+                lastSelectionStart = selectionStart;
+                lastSelectionLength = selectionLength;
+                lastMouseLocation = mousePos;
+
+                // Restart debounce timer
+                tooltipTimer.Stop();
+                tooltipTimer.Start();
+            }
+
+
+           
+        }
+
         #endregion
 
         #region Private Methods
+
+
+
         private int CountHexBytesInSelection(int selectionStartIndex, int selectionEndIndex)
         {
             int count = 0;
@@ -297,15 +344,13 @@ namespace DeviceDump
             int column = charIndex - lineStart;
 
             string lineText = richTextBoxHexDump.Lines[line];
-            if (lineText.Length < 16) // Now expect at least 16 chars for address
+            if (lineText.Length < 17) // 16 addr + space
                 return -1;
 
-            // Parse first 16 characters as hex address
             if (!int.TryParse(lineText.Substring(0, 16), System.Globalization.NumberStyles.HexNumber, null, out int baseAddr))
                 return -1;
 
-            // Hex dump starts at column 17 (index 16), each byte = 2 hex + 1 space => 3 columns
-            if (column < 17 || column > 64) // 16 address + space, then 16 bytes * 3 = 48 chars
+            if (column < 17 || column > 64)
                 return -1;
 
             int byteIndex = (column - 17) / 3;
@@ -317,27 +362,27 @@ namespace DeviceDump
 
 
         // Helper method to extract byte array from hex dump based on address
-        private byte[] GetSelectedBytesFromHexDump(int startAddress, int length)
+        private byte[] GetSelectedBytesFromHexDump(int startAddress, int length, int fromLine, int toLine)
         {
             byte[] result = new byte[length];
             int resultIndex = 0;
 
-            foreach (var line in richTextBoxHexDump.Lines)
+            for (int lineIndex = fromLine; lineIndex <= toLine; lineIndex++)
             {
-                if (line.Length < 9)
+                string line = richTextBoxHexDump.Lines[lineIndex];
+                if (line.Length < 17)
                     continue;
 
-                if (!long.TryParse(line.Substring(0, 16), System.Globalization.NumberStyles.HexNumber, null, out long lineAddress))
+                if (!int.TryParse(line.Substring(0, 16), System.Globalization.NumberStyles.HexNumber, null, out int lineAddress))
                     continue;
-
 
                 if (startAddress >= lineAddress + 16 || startAddress + length <= lineAddress)
-                    continue; // Skip lines not within range
+                    continue;
 
                 string[] parts = line.Substring(17).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 for (int i = 0; i < parts.Length && i < 16; i++)
                 {
-                    long currentAddress = lineAddress + (long)i;
+                    int currentAddress = lineAddress + i;
                     if (currentAddress >= startAddress && currentAddress < startAddress + length)
                     {
                         if (byte.TryParse(parts[i], System.Globalization.NumberStyles.HexNumber, null, out byte b))
@@ -352,6 +397,7 @@ namespace DeviceDump
 
             return resultIndex == length ? result : null;
         }
+
 
         private void JumpToAddressOnDeviceToolStripMenuItem(PhysicalDevice device, string addressHex)
         {
@@ -454,7 +500,7 @@ namespace DeviceDump
                     // Open the device.
                     OpenClosePhysicalDevice(true, device);
 
-                    AddDumpsToHexDump(dumper.ReadHexFromDevice(0, 512));
+                    AddDumpsToHexDump(dumper.ReadHexFromDevice(true, 0, 512));
 
                     // Update frontend.
                     UpdateSelectedDevice(device);
@@ -514,21 +560,23 @@ namespace DeviceDump
 
 
         // Decides if the hex dump should be appended or replaced based on the number of bytes read.
-        private void AddDumpsToHexDump(List<string> newDumps)
+        private void AddDumpsToHexDump(string hexDumpFilePath)
         {
-            if (SelectedPhysicalDevice == null || SelectedPhysicalDevice.BytesRead <= 0)
+            if (string.IsNullOrEmpty(hexDumpFilePath) || !File.Exists(hexDumpFilePath))
             {
-                richTextBoxHexDump.Text = string.Join(Environment.NewLine, newDumps);
+                // If file path invalid, just clear or show empty text
+                richTextBoxHexDump.Text = string.Empty;
+                return;
             }
-            else if (SelectedPhysicalDevice != null && SelectedPhysicalDevice.BytesRead > 0)
-            {
-                string text = richTextBoxHexDump.Text;
-                text += "\n";
-                text += string.Join(Environment.NewLine, newDumps);
 
-                richTextBoxHexDump.Text = text;
-            }
+            richTextBoxHexDump.SuspendLayout();
+            var allLines = File.ReadAllLines(hexDumpFilePath);
+            // Join lines and set the text
+            richTextBoxHexDump.Text = string.Join(Environment.NewLine, allLines);
+            richTextBoxHexDump.ResumeLayout();
         }
+
+
 
         private void ProcessReadBytesInput(ulong value)
         {
@@ -545,7 +593,7 @@ namespace DeviceDump
                 DeviceHexDumper dumper = new DeviceHexDumper(SelectedPhysicalDevice);
 
                 // Read the specified number of bytes from the device.
-                AddDumpsToHexDump(dumper.ReadHexFromDevice(SelectedPhysicalDevice.BytesRead > 0 ? (int)SelectedPhysicalDevice.BytesRead : 0, (int)bytes));
+                AddDumpsToHexDump(dumper.ReadHexFromDevice(false, SelectedPhysicalDevice.BytesRead > 0 ? (int)SelectedPhysicalDevice.BytesRead : 0, (int)bytes));
 
                 UpdateSelectedDevice(SelectedPhysicalDevice);
 
