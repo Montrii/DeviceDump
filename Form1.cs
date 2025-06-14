@@ -161,6 +161,110 @@ namespace DeviceDump
                 }
             }
         }
+
+
+        // Yes - this is ChatGPT code.
+        private void richTextBoxHexDump_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (SelectedPhysicalDevice == null)
+                return;
+
+            // No selection? Clear tooltip and exit
+            if (richTextBoxHexDump.SelectionLength == 0)
+            {
+                byteToolTip.SetToolTip(richTextBoxHexDump, "");
+                return;
+            }
+
+            int index = richTextBoxHexDump.GetCharIndexFromPosition(e.Location);
+            int line = richTextBoxHexDump.GetLineFromCharIndex(index);
+            int firstCharIndex = richTextBoxHexDump.GetFirstCharIndexFromLine(line);
+            int column = index - firstCharIndex;
+
+            // Safety check
+            if (line < 0 || line >= richTextBoxHexDump.Lines.Length)
+                return;
+
+            string lineText = richTextBoxHexDump.Lines[line];
+            if (lineText.Length < 8)
+                return;
+
+            // Parse line address
+            string addressPrefix = lineText.Substring(0, 8);
+            if (!int.TryParse(addressPrefix, System.Globalization.NumberStyles.HexNumber, null, out int baseAddress))
+                return;
+
+            int byteIndex = (column - 9) / 3;
+            if (byteIndex < 0 || byteIndex > 15)
+                return;
+
+            int currentAddress = baseAddress + byteIndex;
+
+            int selectionStartIndex = richTextBoxHexDump.SelectionStart;
+            int selectionEndIndex = selectionStartIndex + richTextBoxHexDump.SelectionLength - 1;
+
+            if (index >= selectionStartIndex && index <= selectionEndIndex)
+            {
+                // Get line/column of selection start
+                int startLine = richTextBoxHexDump.GetLineFromCharIndex(selectionStartIndex);
+                int startLineChar = richTextBoxHexDump.GetFirstCharIndexFromLine(startLine);
+                int startCol = selectionStartIndex - startLineChar;
+
+                if (startLine < 0 || startLine >= richTextBoxHexDump.Lines.Length)
+                    return;
+
+                string startLineText = richTextBoxHexDump.Lines[startLine];
+                if (startLineText.Length < 8)
+                    return;
+
+                string startAddrPrefix = startLineText.Substring(0, 8);
+                if (!int.TryParse(startAddrPrefix, System.Globalization.NumberStyles.HexNumber, null, out int startBaseAddress))
+                    return;
+
+                int startByteIndex = (startCol - 9) / 3;
+                if (startByteIndex < 0 || startByteIndex > 15)
+                    return;
+
+                int startAddress = startBaseAddress + startByteIndex;
+
+                // Get line/column of selection end
+                int endLine = richTextBoxHexDump.GetLineFromCharIndex(selectionEndIndex);
+                int endLineChar = richTextBoxHexDump.GetFirstCharIndexFromLine(endLine);
+                int endCol = selectionEndIndex - endLineChar;
+
+                if (endLine < 0 || endLine >= richTextBoxHexDump.Lines.Length)
+                    return;
+
+                string endLineText = richTextBoxHexDump.Lines[endLine];
+                if (endLineText.Length < 8)
+                    return;
+
+                string endAddrPrefix = endLineText.Substring(0, 8);
+                if (!int.TryParse(endAddrPrefix, System.Globalization.NumberStyles.HexNumber, null, out int endBaseAddress))
+                    return;
+
+                int endByteIndex = (endCol - 9) / 3;
+                if (endByteIndex < 0 || endByteIndex > 15)
+                    return;
+
+                int endAddress = endBaseAddress + endByteIndex;
+
+                // Tooltip text: range or single
+                if (startAddress == endAddress)
+                {
+                    byteToolTip.SetToolTip(richTextBoxHexDump, $"Address: 0x{startAddress:X8}");
+                }
+                else
+                {
+                    byteToolTip.SetToolTip(richTextBoxHexDump, $"Range: 0x{startAddress:X8} - 0x{endAddress:X8}");
+                }
+            }
+            else
+            {
+                byteToolTip.SetToolTip(richTextBoxHexDump, "");
+            }
+        }
+
         #endregion
 
         #region Private Methods
@@ -372,107 +476,7 @@ namespace DeviceDump
         #endregion
 
 
-        // Yes - this is ChatGPT code.
-        private void richTextBoxHexDump_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (SelectedPhysicalDevice == null)
-                return;
-
-            // No selection? Clear tooltip and exit
-            if (richTextBoxHexDump.SelectionLength == 0)
-            {
-                byteToolTip.SetToolTip(richTextBoxHexDump, "");
-                return;
-            }
-
-            int index = richTextBoxHexDump.GetCharIndexFromPosition(e.Location);
-            int line = richTextBoxHexDump.GetLineFromCharIndex(index);
-            int firstCharIndex = richTextBoxHexDump.GetFirstCharIndexFromLine(line);
-            int column = index - firstCharIndex;
-
-            // Safety check
-            if (line < 0 || line >= richTextBoxHexDump.Lines.Length)
-                return;
-
-            string lineText = richTextBoxHexDump.Lines[line];
-            if (lineText.Length < 8)
-                return;
-
-            // Parse line address
-            string addressPrefix = lineText.Substring(0, 8);
-            if (!int.TryParse(addressPrefix, System.Globalization.NumberStyles.HexNumber, null, out int baseAddress))
-                return;
-
-            int byteIndex = (column - 9) / 3;
-            if (byteIndex < 0 || byteIndex > 15)
-                return;
-
-            int currentAddress = baseAddress + byteIndex;
-
-            int selectionStartIndex = richTextBoxHexDump.SelectionStart;
-            int selectionEndIndex = selectionStartIndex + richTextBoxHexDump.SelectionLength - 1;
-
-            if (index >= selectionStartIndex && index <= selectionEndIndex)
-            {
-                // Get line/column of selection start
-                int startLine = richTextBoxHexDump.GetLineFromCharIndex(selectionStartIndex);
-                int startLineChar = richTextBoxHexDump.GetFirstCharIndexFromLine(startLine);
-                int startCol = selectionStartIndex - startLineChar;
-
-                if (startLine < 0 || startLine >= richTextBoxHexDump.Lines.Length)
-                    return;
-
-                string startLineText = richTextBoxHexDump.Lines[startLine];
-                if (startLineText.Length < 8)
-                    return;
-
-                string startAddrPrefix = startLineText.Substring(0, 8);
-                if (!int.TryParse(startAddrPrefix, System.Globalization.NumberStyles.HexNumber, null, out int startBaseAddress))
-                    return;
-
-                int startByteIndex = (startCol - 9) / 3;
-                if (startByteIndex < 0 || startByteIndex > 15)
-                    return;
-
-                int startAddress = startBaseAddress + startByteIndex;
-
-                // Get line/column of selection end
-                int endLine = richTextBoxHexDump.GetLineFromCharIndex(selectionEndIndex);
-                int endLineChar = richTextBoxHexDump.GetFirstCharIndexFromLine(endLine);
-                int endCol = selectionEndIndex - endLineChar;
-
-                if (endLine < 0 || endLine >= richTextBoxHexDump.Lines.Length)
-                    return;
-
-                string endLineText = richTextBoxHexDump.Lines[endLine];
-                if (endLineText.Length < 8)
-                    return;
-
-                string endAddrPrefix = endLineText.Substring(0, 8);
-                if (!int.TryParse(endAddrPrefix, System.Globalization.NumberStyles.HexNumber, null, out int endBaseAddress))
-                    return;
-
-                int endByteIndex = (endCol - 9) / 3;
-                if (endByteIndex < 0 || endByteIndex > 15)
-                    return;
-
-                int endAddress = endBaseAddress + endByteIndex;
-
-                // Tooltip text: range or single
-                if (startAddress == endAddress)
-                {
-                    byteToolTip.SetToolTip(richTextBoxHexDump, $"Address: 0x{startAddress:X8}");
-                }
-                else
-                {
-                    byteToolTip.SetToolTip(richTextBoxHexDump, $"Range: 0x{startAddress:X8} - 0x{endAddress:X8}");
-                }
-            }
-            else
-            {
-                byteToolTip.SetToolTip(richTextBoxHexDump, "");
-            }
-        }
+        
 
 
     }
