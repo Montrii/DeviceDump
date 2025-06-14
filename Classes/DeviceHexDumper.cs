@@ -12,7 +12,7 @@ namespace DeviceDump.Classes
     {
         private PhysicalDevice _device;
 
-        private readonly string _outputFilePath;
+        private string _outputFilePath;
 
         public DeviceHexDumper(PhysicalDevice device)
         {
@@ -21,15 +21,27 @@ namespace DeviceDump.Classes
             if (string.IsNullOrWhiteSpace(_device.DevicePath))
                 throw new ArgumentException("DevicePath must be a valid non-empty string.");
 
+
+        }
+
+
+        // Deletes the output file if it exists.
+        public void DeleteHexDump()
+        {
+            if (!string.IsNullOrEmpty(_outputFilePath) && File.Exists(_outputFilePath))
+                File.Delete(_outputFilePath);
+        }
+
+        public void CreateHexDumpFile()
+        {
             // Generate a safe filename from the device path
-            string safeFileName = Path.GetFileName(_device.DevicePath)
+            string safeFileName = _device.DevicePath
                 .Replace(Path.DirectorySeparatorChar, '_')
                 .Replace(Path.AltDirectorySeparatorChar, '_');
 
             // Default file path in temp directory
             _outputFilePath = Path.Combine(Path.GetTempPath(), $"{safeFileName}_hexdump.txt");
         }
-
 
 
         // Returns a string with the specified amount of bytes read from the device in hex format.
@@ -57,6 +69,10 @@ namespace DeviceDump.Classes
 
             if (createNewFile)
             {
+                // Call here to delete the existing file if createNewFile is true
+                DeleteHexDump();
+
+                CreateHexDumpFile();
                 // Overwrite the file with the new dump
                 File.WriteAllLines(_outputFilePath, dump);
             }

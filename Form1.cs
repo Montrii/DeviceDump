@@ -4,7 +4,9 @@ using System.Management;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using Timer = System.Windows.Forms.Timer;
+using ToolTip = System.Windows.Forms.ToolTip;
 
 namespace DeviceDump
 {
@@ -16,9 +18,9 @@ namespace DeviceDump
         // Clicked Device.
         private PhysicalDevice SelectedPhysicalDevice { get; set; }
 
-
         private ToolTip byteToolTip;
 
+        private DeviceHexDumper Dumper { get; set; }
 
         private Timer tooltipTimer;
         private int lastSelectionStart = -1;
@@ -40,6 +42,12 @@ namespace DeviceDump
 
 
         #region Click Events
+
+        private void Form1_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            Dumper.DeleteHexDump();
+        }
+
 
         // When "Jump to Address on Device" was clicked.
         private void jumpToAddressOnDeviceToolStripMenuItem_Click(object sender, EventArgs e)
@@ -494,13 +502,13 @@ namespace DeviceDump
             {
                 clickedItem.Checked = true;
 
-                DeviceHexDumper dumper = new DeviceHexDumper(device);
+                Dumper = new DeviceHexDumper(device);
                 try
                 {
                     // Open the device.
                     OpenClosePhysicalDevice(true, device);
 
-                    AddDumpsToHexDump(dumper.ReadHexFromDevice(true, 0, 512));
+                    AddDumpsToHexDump(Dumper.ReadHexFromDevice(true, 0, 512));
 
                     // Update frontend.
                     UpdateSelectedDevice(device);
@@ -589,11 +597,8 @@ namespace DeviceDump
                 // Open the device.
                 OpenClosePhysicalDevice(true, SelectedPhysicalDevice);
 
-                // Create a new DeviceHexDumper instance.
-                DeviceHexDumper dumper = new DeviceHexDumper(SelectedPhysicalDevice);
-
                 // Read the specified number of bytes from the device.
-                AddDumpsToHexDump(dumper.ReadHexFromDevice(false, SelectedPhysicalDevice.BytesRead > 0 ? (int)SelectedPhysicalDevice.BytesRead : 0, (int)bytes));
+                AddDumpsToHexDump(Dumper.ReadHexFromDevice(false, SelectedPhysicalDevice.BytesRead > 0 ? (int)SelectedPhysicalDevice.BytesRead : 0, (int)bytes));
 
                 UpdateSelectedDevice(SelectedPhysicalDevice);
 
