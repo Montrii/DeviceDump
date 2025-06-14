@@ -210,8 +210,8 @@ namespace DeviceDump
                 return;
 
             string tooltip = (startByteAddr == endByteAddr)
-                ? $"Address: 0x{startByteAddr:X8}\n"
-                : $"Range: 0x{startByteAddr:X8} - 0x{endByteAddr:X8}\n";
+                ? $"Address: 0x{startByteAddr:X16}\n"
+                : $"Range: 0x{startByteAddr:X16} - 0x{endByteAddr:X16}\n";
 
             switch (length)
             {
@@ -297,21 +297,24 @@ namespace DeviceDump
             int column = charIndex - lineStart;
 
             string lineText = richTextBoxHexDump.Lines[line];
-            if (lineText.Length < 8)
+            if (lineText.Length < 16) // Now expect at least 16 chars for address
                 return -1;
 
-            if (!int.TryParse(lineText.Substring(0, 8), System.Globalization.NumberStyles.HexNumber, null, out int baseAddr))
+            // Parse first 16 characters as hex address
+            if (!int.TryParse(lineText.Substring(0, 16), System.Globalization.NumberStyles.HexNumber, null, out int baseAddr))
                 return -1;
 
-            if (column < 9 || column > 56)
+            // Hex dump starts at column 17 (index 16), each byte = 2 hex + 1 space => 3 columns
+            if (column < 17 || column > 64) // 16 address + space, then 16 bytes * 3 = 48 chars
                 return -1;
 
-            int byteIndex = (column - 9) / 3;
+            int byteIndex = (column - 17) / 3;
             if (byteIndex < 0 || byteIndex > 15)
                 return -1;
 
             return baseAddr + byteIndex;
         }
+
 
         // Helper method to extract byte array from hex dump based on address
         private byte[] GetSelectedBytesFromHexDump(int startAddress, int length)
@@ -324,16 +327,17 @@ namespace DeviceDump
                 if (line.Length < 9)
                     continue;
 
-                if (!int.TryParse(line.Substring(0, 8), System.Globalization.NumberStyles.HexNumber, null, out int lineAddress))
+                if (!long.TryParse(line.Substring(0, 16), System.Globalization.NumberStyles.HexNumber, null, out long lineAddress))
                     continue;
+
 
                 if (startAddress >= lineAddress + 16 || startAddress + length <= lineAddress)
                     continue; // Skip lines not within range
 
-                string[] parts = line.Substring(9).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                string[] parts = line.Substring(17).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 for (int i = 0; i < parts.Length && i < 16; i++)
                 {
-                    int currentAddress = lineAddress + i;
+                    long currentAddress = lineAddress + (long)i;
                     if (currentAddress >= startAddress && currentAddress < startAddress + length)
                     {
                         if (byte.TryParse(parts[i], System.Globalization.NumberStyles.HexNumber, null, out byte b))
