@@ -175,123 +175,143 @@ namespace DeviceDump
                 return;
             }
 
-            int index = richTextBoxHexDump.GetCharIndexFromPosition(e.Location);
-            int line = richTextBoxHexDump.GetLineFromCharIndex(index);
-            int firstCharIndex = richTextBoxHexDump.GetFirstCharIndexFromLine(line);
-            int column = index - firstCharIndex;
-
-            if (line < 0 || line >= richTextBoxHexDump.Lines.Length)
-                return;
-
-            string lineText = richTextBoxHexDump.Lines[line];
-            if (lineText.Length < 8)
-                return;
-
-            string addressPrefix = lineText.Substring(0, 8);
-            if (!int.TryParse(addressPrefix, System.Globalization.NumberStyles.HexNumber, null, out int baseAddress))
-                return;
-
-            int byteIndex = (column - 9) / 3;
-            if (byteIndex < 0 || byteIndex > 15)
-                return;
-
-            int currentAddress = baseAddress + byteIndex;
-
             int selectionStartIndex = richTextBoxHexDump.SelectionStart;
             int selectionEndIndex = selectionStartIndex + richTextBoxHexDump.SelectionLength - 1;
 
-            if (index >= selectionStartIndex && index <= selectionEndIndex)
-            {
-                int startLine = richTextBoxHexDump.GetLineFromCharIndex(selectionStartIndex);
-                int startLineChar = richTextBoxHexDump.GetFirstCharIndexFromLine(startLine);
-                int startCol = selectionStartIndex - startLineChar;
+            int startLine = richTextBoxHexDump.GetLineFromCharIndex(selectionStartIndex);
+            int endLine = richTextBoxHexDump.GetLineFromCharIndex(selectionEndIndex);
 
-                if (startLine < 0 || startLine >= richTextBoxHexDump.Lines.Length)
-                    return;
+            if (startLine < 0 || endLine >= richTextBoxHexDump.Lines.Length)
+                return;
 
-                string startLineText = richTextBoxHexDump.Lines[startLine];
-                if (startLineText.Length < 8)
-                    return;
-
-                string startAddrPrefix = startLineText.Substring(0, 8);
-                if (!int.TryParse(startAddrPrefix, System.Globalization.NumberStyles.HexNumber, null, out int startBaseAddress))
-                    return;
-
-                int startByteIndex = (startCol - 9) / 3;
-                if (startByteIndex < 0 || startByteIndex > 15)
-                    return;
-
-                int startAddress = startBaseAddress + startByteIndex;
-
-                int endLine = richTextBoxHexDump.GetLineFromCharIndex(selectionEndIndex);
-                int endLineChar = richTextBoxHexDump.GetFirstCharIndexFromLine(endLine);
-                int endCol = selectionEndIndex - endLineChar;
-
-                if (endLine < 0 || endLine >= richTextBoxHexDump.Lines.Length)
-                    return;
-
-                string endLineText = richTextBoxHexDump.Lines[endLine];
-                if (endLineText.Length < 8)
-                    return;
-
-                string endAddrPrefix = endLineText.Substring(0, 8);
-                if (!int.TryParse(endAddrPrefix, System.Globalization.NumberStyles.HexNumber, null, out int endBaseAddress))
-                    return;
-
-                int endByteIndex = (endCol - 9) / 3;
-                if (endByteIndex < 0 || endByteIndex > 15)
-                    return;
-
-                int endAddress = endBaseAddress + endByteIndex;
-
-                int length = endAddress - startAddress + 1;
-                byte[] selectedBytes = GetSelectedBytesFromHexDump(startAddress, length);
-
-                if (selectedBytes == null || selectedBytes.Length != length)
-                    return;
-
-                string tooltip = (startAddress == endAddress)
-                    ? $"Address: 0x{startAddress:X8}\n"
-                    : $"Range: 0x{startAddress:X8} - 0x{endAddress:X8}\n";
-
-                switch (length)
-                {
-                    case 1:
-                        tooltip += $"Bool: {Convert.ToBoolean(selectedBytes[0])}\n";
-                        tooltip += $"Char: {(char)selectedBytes[0]}\n";
-                        break;
-                    case 2:
-                        short s = BitConverter.ToInt16(selectedBytes, 0);
-                        tooltip += $"Short: {s}\n";
-                        tooltip += $"String: {System.Text.Encoding.ASCII.GetString(selectedBytes) ?? "null"}\n";
-                        break;
-                    case 4:
-                        int i = BitConverter.ToInt32(selectedBytes, 0);
-                        tooltip += $"Int: {i}\n";
-                        tooltip += $"String: {System.Text.Encoding.ASCII.GetString(selectedBytes) ?? "null"}\n";
-                        break;
-                    case 8:
-                        long l = BitConverter.ToInt64(selectedBytes, 0);
-                        tooltip += $"Long: {l}\n";
-                        tooltip += $"String: {System.Text.Encoding.ASCII.GetString(selectedBytes) ?? "null"}\n";
-                        break;
-                    default:
-                        tooltip += $"String: {System.Text.Encoding.ASCII.GetString(selectedBytes) ?? "null"}\n";
-                        break;
-                }
-
-                byteToolTip.SetToolTip(richTextBoxHexDump, tooltip.TrimEnd());
-            }
-            else
+            // Check if selection is within address or ASCII area for both start and end
+            if (IsInNonHexRegion(selectionStartIndex) || IsInNonHexRegion(selectionEndIndex))
             {
                 byteToolTip.SetToolTip(richTextBoxHexDump, "");
+                return;
             }
-        }
 
+            // Compute byte address
+            int startByteAddr = GetByteAddressFromCharIndex(selectionStartIndex);
+            int endByteAddr = GetByteAddressFromCharIndex(selectionEndIndex);
+            if (startByteAddr == -1 || endByteAddr == -1)
+                return;
+
+            // Count actual hex byte pairs in selection range (ignoring spaces)
+            int length = CountHexBytesInSelection(selectionStartIndex, selectionEndIndex);
+            if (length <= 0)
+                return;
+
+            if (length <= 0)
+                return;
+
+            byte[] selectedBytes = GetSelectedBytesFromHexDump(startByteAddr, length);
+            if (selectedBytes == null || selectedBytes.Length != length)
+                return;
+
+            string tooltip = (startByteAddr == endByteAddr)
+                ? $"Address: 0x{startByteAddr:X8}\n"
+                : $"Range: 0x{startByteAddr:X8} - 0x{endByteAddr:X8}\n";
+
+            switch (length)
+            {
+                case 1:
+                    tooltip += $"Bool: {Convert.ToBoolean(selectedBytes[0])}\n";
+                    tooltip += $"Char: {(char)selectedBytes[0]}\n";
+                    break;
+                case 2:
+                    tooltip += $"Short: {BitConverter.ToInt16(selectedBytes, 0)}\n";
+                    tooltip += $"String: {System.Text.Encoding.ASCII.GetString(selectedBytes)}\n";
+                    break;
+                case 4:
+                    tooltip += $"Int: {BitConverter.ToInt32(selectedBytes, 0)}\n";
+                    tooltip += $"String: {System.Text.Encoding.ASCII.GetString(selectedBytes)}\n";
+                    break;
+                case 8:
+                    tooltip += $"Long: {BitConverter.ToInt64(selectedBytes, 0)}\n";
+                    tooltip += $"String: {System.Text.Encoding.ASCII.GetString(selectedBytes)}\n";
+                    break;
+                default:
+                    tooltip += $"String: {System.Text.Encoding.ASCII.GetString(selectedBytes)}\n";
+                    break;
+            }
+
+            byteToolTip.SetToolTip(richTextBoxHexDump, tooltip.TrimEnd());
+        }
         #endregion
 
         #region Private Methods
+        private int CountHexBytesInSelection(int selectionStartIndex, int selectionEndIndex)
+        {
+            int count = 0;
+            for (int i = selectionStartIndex; i <= selectionEndIndex; i++)
+            {
+                char c = richTextBoxHexDump.Text[i];
+                // Only count hex digits — two consecutive hex digits form a byte
+                if (IsHexChar(c))
+                {
+                    int j = i + 1;
+                    if (j <= selectionEndIndex && IsHexChar(richTextBoxHexDump.Text[j]))
+                    {
+                        count++;
+                        i = j; // Skip next char since we've counted a full byte
+                    }
+                }
+            }
+            return count;
+        }
 
+        private bool IsHexChar(char c)
+        {
+            return (c >= '0' && c <= '9') ||
+                   (c >= 'A' && c <= 'F') ||
+                   (c >= 'a' && c <= 'f');
+        }
+
+
+
+        // Helper: Checks if character index is in address or ASCII region
+        private bool IsInNonHexRegion(int charIndex)
+        {
+            int line = richTextBoxHexDump.GetLineFromCharIndex(charIndex);
+            if (line < 0 || line >= richTextBoxHexDump.Lines.Length)
+                return true;
+
+            int lineStart = richTextBoxHexDump.GetFirstCharIndexFromLine(line);
+            int column = charIndex - lineStart;
+
+            // Address region: column 0–7, separator at 8
+            // Hex region: starts at 9 and spans 16*3 = 48 chars (e.g., "FF FF FF...")
+            // ASCII region: typically starts at column 58+
+            return (column < 9 || column >= 58);
+        }
+
+        // Helper: Gets byte index from character index (returns -1 if not in byte column)
+        private int GetByteAddressFromCharIndex(int charIndex)
+        {
+            int line = richTextBoxHexDump.GetLineFromCharIndex(charIndex);
+            if (line < 0 || line >= richTextBoxHexDump.Lines.Length)
+                return -1;
+
+            int lineStart = richTextBoxHexDump.GetFirstCharIndexFromLine(line);
+            int column = charIndex - lineStart;
+
+            string lineText = richTextBoxHexDump.Lines[line];
+            if (lineText.Length < 8)
+                return -1;
+
+            if (!int.TryParse(lineText.Substring(0, 8), System.Globalization.NumberStyles.HexNumber, null, out int baseAddr))
+                return -1;
+
+            if (column < 9 || column > 56)
+                return -1;
+
+            int byteIndex = (column - 9) / 3;
+            if (byteIndex < 0 || byteIndex > 15)
+                return -1;
+
+            return baseAddr + byteIndex;
+        }
 
         // Helper method to extract byte array from hex dump based on address
         private byte[] GetSelectedBytesFromHexDump(int startAddress, int length)
