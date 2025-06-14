@@ -32,6 +32,10 @@ namespace DeviceDump
         public Form1()
         {
             InitializeComponent();
+
+            this.FormBorderStyle = FormBorderStyle.FixedDialog; // Prevents resizing
+            this.MaximizeBox = false;                           // Hides/Disables maximize button
+
             byteToolTip = new ToolTip();
 
             tooltipTimer = new Timer();
@@ -41,7 +45,7 @@ namespace DeviceDump
         #endregion
 
 
-        #region Click Events
+        #region Events
 
         private void Form1_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
@@ -293,9 +297,6 @@ namespace DeviceDump
         #endregion
 
         #region Private Methods
-
-
-
         private int CountHexBytesInSelection(int selectionStartIndex, int selectionEndIndex)
         {
             int count = 0;
@@ -508,13 +509,30 @@ namespace DeviceDump
                     // Open the device.
                     OpenClosePhysicalDevice(true, device);
 
+
+                    // Show loading form (non-blocking)
+                    LoadingForm form = new LoadingForm(this,"Loading hex dump file...");
+                    form.Show(this); // Non-blocking
+
                     AddDumpsToHexDump(Dumper.ReadHexFromDevice(true, 0, 512));
+
+
 
                     // Update frontend.
                     UpdateSelectedDevice(device);
 
                     // Immediately close the device after reading -> so it can be used again.
                     OpenClosePhysicalDevice(false, SelectedPhysicalDevice);
+
+                    // Close the loading form (safely from UI thread)
+                    if (form.InvokeRequired)
+                    {
+                        form.Invoke(new Action(() => form.Close()));
+                    }
+                    else
+                    {
+                        form.Close();
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -568,21 +586,29 @@ namespace DeviceDump
 
 
         // Decides if the hex dump should be appended or replaced based on the number of bytes read.
-        private void AddDumpsToHexDump(string hexDumpFilePath)
+        // Decides if the hex dump should be appended or replaced based on the number of bytes read.
+        private async void AddDumpsToHexDump(string hexDumpFilePath)
         {
             if (string.IsNullOrEmpty(hexDumpFilePath) || !File.Exists(hexDumpFilePath))
             {
-                // If file path invalid, just clear or show empty text
                 richTextBoxHexDump.Text = string.Empty;
                 return;
             }
 
+            // Load the file on background thread
+            string[] allLines = await Task.Run(() =>
+            {
+                return File.ReadAllLines(hexDumpFilePath);
+            });
+
+            // Update the UI
             richTextBoxHexDump.SuspendLayout();
-            var allLines = File.ReadAllLines(hexDumpFilePath);
-            // Join lines and set the text
             richTextBoxHexDump.Text = string.Join(Environment.NewLine, allLines);
             richTextBoxHexDump.ResumeLayout();
         }
+
+
+
 
 
 
@@ -597,12 +623,26 @@ namespace DeviceDump
                 // Open the device.
                 OpenClosePhysicalDevice(true, SelectedPhysicalDevice);
 
+                // Show loading form (non-blocking)
+                LoadingForm form = new LoadingForm(this,"Loading hex dump file...");
+                form.Show(this); // Non-blocking
+
                 // Read the specified number of bytes from the device.
                 AddDumpsToHexDump(Dumper.ReadHexFromDevice(false, SelectedPhysicalDevice.BytesRead > 0 ? (int)SelectedPhysicalDevice.BytesRead : 0, (int)bytes));
 
                 UpdateSelectedDevice(SelectedPhysicalDevice);
 
                 OpenClosePhysicalDevice(false, SelectedPhysicalDevice);
+
+                // Close the loading form (safely from UI thread)
+                if (form.InvokeRequired)
+                {
+                    form.Invoke(new Action(() => form.Close()));
+                }
+                else
+                {
+                    form.Close();
+                }
             }
             catch (Exception ex)
             {
