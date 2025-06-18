@@ -1,0 +1,39 @@
+name: Desktop Build on Windows Servers (2019 and 2022)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build-server:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [windows-2022, windows-2019]
+        configuration: [Debug, Release]
+
+    env:
+      Solution_Name: DeviceDump.sln  # Replace with your actual solution name
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore NuGet packages
+        run: msbuild $env:Solution_Name /t:Restore /p:Configuration=${{ matrix.configuration }}
+
+      - name: Build solution - ${{ matrix.configuration }}
+        run: msbuild $env:Solution_Name /p:Configuration=${{ matrix.configuration }}
