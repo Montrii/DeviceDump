@@ -1,4 +1,4 @@
-name: .NET Build Debug/Release
+name: Build Debug/Release
 
 on:
   push:
