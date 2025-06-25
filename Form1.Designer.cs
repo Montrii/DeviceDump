@@ -34,6 +34,7 @@
             selectDeviceToolStripMenuItem = new ToolStripMenuItem();
             navigationToolStripMenuItem = new ToolStripMenuItem();
             readBytesFromDeviceToolStripMenuItem = new ToolStripMenuItem();
+            jumpToAddressOnDeviceToolStripMenuItem = new ToolStripMenuItem();
             label1 = new Label();
             labelSelectedPhysicalDevice = new Label();
             richTextBoxHexDump = new RichTextBox();
@@ -43,7 +44,6 @@
             labelBytesRead = new Label();
             label4 = new Label();
             labelDeviceUsed = new Label();
-            jumpToAddressOnDeviceToolStripMenuItem = new ToolStripMenuItem();
             menuStripToolbar.SuspendLayout();
             SuspendLayout();
             // 
@@ -86,6 +86,13 @@
             readBytesFromDeviceToolStripMenuItem.Text = "Read Bytes From Device";
             readBytesFromDeviceToolStripMenuItem.Click += readBytesFromDeviceToolStripMenuItem_Click;
             // 
+            // jumpToAddressOnDeviceToolStripMenuItem
+            // 
+            jumpToAddressOnDeviceToolStripMenuItem.Name = "jumpToAddressOnDeviceToolStripMenuItem";
+            jumpToAddressOnDeviceToolStripMenuItem.Size = new Size(217, 22);
+            jumpToAddressOnDeviceToolStripMenuItem.Text = "Jump to Address on Device";
+            jumpToAddressOnDeviceToolStripMenuItem.Click += jumpToAddressOnDeviceToolStripMenuItem_Click;
+            // 
             // label1
             // 
             label1.AutoSize = true;
@@ -114,6 +121,7 @@
             richTextBoxHexDump.Size = new Size(683, 320);
             richTextBoxHexDump.TabIndex = 3;
             richTextBoxHexDump.Text = "";
+            richTextBoxHexDump.MouseMove += richTextBoxHexDump_MouseMove;
             // 
             // label2
             // 
@@ -170,13 +178,6 @@
             labelDeviceUsed.Name = "labelDeviceUsed";
             labelDeviceUsed.Size = new Size(0, 15);
             labelDeviceUsed.TabIndex = 9;
-            // 
-            // jumpToAddressOnDeviceToolStripMenuItem
-            // 
-            jumpToAddressOnDeviceToolStripMenuItem.Name = "jumpToAddressOnDeviceToolStripMenuItem";
-            jumpToAddressOnDeviceToolStripMenuItem.Size = new Size(217, 22);
-            jumpToAddressOnDeviceToolStripMenuItem.Text = "Jump to Address on Device";
-            jumpToAddressOnDeviceToolStripMenuItem.Click += jumpToAddressOnDeviceToolStripMenuItem_Click;
             // 
             // Form1
             // 

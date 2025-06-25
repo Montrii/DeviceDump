@@ -4,6 +4,9 @@ using System.Management;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using Timer = System.Windows.Forms.Timer;
+using ToolTip = System.Windows.Forms.ToolTip;
 
 namespace DeviceDump
 {
@@ -15,17 +18,40 @@ namespace DeviceDump
         // Clicked Device.
         private PhysicalDevice SelectedPhysicalDevice { get; set; }
 
+        private ToolTip byteToolTip;
+
+        private DeviceHexDumper Dumper { get; set; }
+
+        private Timer tooltipTimer;
+        private int lastSelectionStart = -1;
+        private int lastSelectionLength = -1;
+        private Point lastMouseLocation = Point.Empty;
+        private const int TooltipDelayMs = 150;
 
         #region Constructor
         public Form1()
         {
             InitializeComponent();
 
+            this.FormBorderStyle = FormBorderStyle.FixedDialog; // Prevents resizing
+            this.MaximizeBox = false;                           // Hides/Disables maximize button
+
+            byteToolTip = new ToolTip();
+
+            tooltipTimer = new Timer();
+            tooltipTimer.Interval = TooltipDelayMs;
+            tooltipTimer.Tick += TooltipTimer_Tick;
         }
         #endregion
 
 
-        #region Click Events
+        #region Events
+
+        private void Form1_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            Dumper.DeleteHexDump();
+        }
+
 
         // When "Jump to Address on Device" was clicked.
         private void jumpToAddressOnDeviceToolStripMenuItem_Click(object sender, EventArgs e)
@@ -159,9 +185,229 @@ namespace DeviceDump
                 }
             }
         }
+
+
+        private void TooltipTimer_Tick(object sender, EventArgs e)
+        {
+            tooltipTimer.Stop(); // Stop the timer until next MouseMove
+
+            // Run your existing tooltip logic here, but ensure it's fast
+            ShowHexDumpTooltip(lastSelectionStart, lastSelectionLength);
+        }
+
+
+        private void ShowHexDumpTooltip(int selectionStartIndex, int selectionLength)
+        {
+            if (SelectedPhysicalDevice == null || selectionLength == 0)
+            {
+                byteToolTip.SetToolTip(richTextBoxHexDump, "");
+                return;
+            }
+
+            int selectionEndIndex = selectionStartIndex + selectionLength - 1;
+
+            int startLine = richTextBoxHexDump.GetLineFromCharIndex(selectionStartIndex);
+            int endLine = richTextBoxHexDump.GetLineFromCharIndex(selectionEndIndex);
+
+            if (startLine < 0 || endLine >= richTextBoxHexDump.Lines.Length)
+                return;
+
+
+            if (IsInNonHexRegion(selectionStartIndex) || IsInNonHexRegion(selectionEndIndex))
+            {
+                byteToolTip.SetToolTip(richTextBoxHexDump, "");
+                return;
+            }
+
+            int startByteAddr = GetByteAddressFromCharIndex(selectionStartIndex);
+            int endByteAddr = GetByteAddressFromCharIndex(selectionEndIndex);
+            if (startByteAddr == -1 || endByteAddr == -1)
+                return;
+
+            int length = CountHexBytesInSelection(selectionStartIndex, selectionEndIndex);
+            if (length <= 0)
+                return;
+
+            byte[] selectedBytes = GetSelectedBytesFromHexDump(startByteAddr, length, startLine, endLine);
+            if (selectedBytes == null || selectedBytes.Length != length)
+                return;
+
+            string tooltip = (startByteAddr == endByteAddr)
+                ? $"Address: 0x{startByteAddr:X16}\n"
+                : $"Range: 0x{startByteAddr:X16} - 0x{endByteAddr:X16}\n";
+
+            switch (length)
+            {
+                case 1:
+                    tooltip += $"Bool: {Convert.ToBoolean(selectedBytes[0])}\n";
+                    tooltip += $"Char: {(char)selectedBytes[0]}\n";
+                    break;
+                case 2:
+                    tooltip += $"Short: {BitConverter.ToInt16(selectedBytes, 0)}\n";
+                    tooltip += $"String: {System.Text.Encoding.ASCII.GetString(selectedBytes)}\n";
+                    break;
+                case 4:
+                    tooltip += $"Int: {BitConverter.ToInt32(selectedBytes, 0)}\n";
+                    tooltip += $"String: {System.Text.Encoding.ASCII.GetString(selectedBytes)}\n";
+                    break;
+                case 8:
+                    tooltip += $"Long: {BitConverter.ToInt64(selectedBytes, 0)}\n";
+                    tooltip += $"String: {System.Text.Encoding.ASCII.GetString(selectedBytes)}\n";
+                    break;
+                default:
+                    tooltip += $"String: {System.Text.Encoding.ASCII.GetString(selectedBytes)}\n";
+                    break;
+            }
+
+            byteToolTip.SetToolTip(richTextBoxHexDump, tooltip.TrimEnd());
+        }
+
+
+
+
+
+
+        // Yes - this is ChatGPT code.
+        private void richTextBoxHexDump_MouseMove(object sender, MouseEventArgs e)
+        {
+
+            // Record current state
+            Point mousePos = e.Location;
+            int selectionStart = richTextBoxHexDump.SelectionStart;
+            int selectionLength = richTextBoxHexDump.SelectionLength;
+
+            // Only re-trigger if something actually changed
+            if (selectionStart != lastSelectionStart ||
+                selectionLength != lastSelectionLength ||
+                mousePos != lastMouseLocation)
+            {
+                lastSelectionStart = selectionStart;
+                lastSelectionLength = selectionLength;
+                lastMouseLocation = mousePos;
+
+                // Restart debounce timer
+                tooltipTimer.Stop();
+                tooltipTimer.Start();
+            }
+
+
+           
+        }
+
         #endregion
 
         #region Private Methods
+        private int CountHexBytesInSelection(int selectionStartIndex, int selectionEndIndex)
+        {
+            int count = 0;
+            for (int i = selectionStartIndex; i <= selectionEndIndex; i++)
+            {
+                char c = richTextBoxHexDump.Text[i];
+                // Only count hex digits — two consecutive hex digits form a byte
+                if (IsHexChar(c))
+                {
+                    int j = i + 1;
+                    if (j <= selectionEndIndex && IsHexChar(richTextBoxHexDump.Text[j]))
+                    {
+                        count++;
+                        i = j; // Skip next char since we've counted a full byte
+                    }
+                }
+            }
+            return count;
+        }
+
+        private bool IsHexChar(char c)
+        {
+            return (c >= '0' && c <= '9') ||
+                   (c >= 'A' && c <= 'F') ||
+                   (c >= 'a' && c <= 'f');
+        }
+
+
+
+        // Helper: Checks if character index is in address or ASCII region
+        private bool IsInNonHexRegion(int charIndex)
+        {
+            int line = richTextBoxHexDump.GetLineFromCharIndex(charIndex);
+            if (line < 0 || line >= richTextBoxHexDump.Lines.Length)
+                return true;
+
+            int lineStart = richTextBoxHexDump.GetFirstCharIndexFromLine(line);
+            int column = charIndex - lineStart;
+
+            // Address region: column 0–7, separator at 8
+            // Hex region: starts at 9 and spans 16*3 = 48 chars (e.g., "FF FF FF...")
+            // ASCII region: typically starts at column 58+
+            return (column < 9 || column >= 58);
+        }
+
+        // Helper: Gets byte index from character index (returns -1 if not in byte column)
+        private int GetByteAddressFromCharIndex(int charIndex)
+        {
+            int line = richTextBoxHexDump.GetLineFromCharIndex(charIndex);
+            if (line < 0 || line >= richTextBoxHexDump.Lines.Length)
+                return -1;
+
+            int lineStart = richTextBoxHexDump.GetFirstCharIndexFromLine(line);
+            int column = charIndex - lineStart;
+
+            string lineText = richTextBoxHexDump.Lines[line];
+            if (lineText.Length < 17) // 16 addr + space
+                return -1;
+
+            if (!int.TryParse(lineText.Substring(0, 16), System.Globalization.NumberStyles.HexNumber, null, out int baseAddr))
+                return -1;
+
+            if (column < 17 || column > 64)
+                return -1;
+
+            int byteIndex = (column - 17) / 3;
+            if (byteIndex < 0 || byteIndex > 15)
+                return -1;
+
+            return baseAddr + byteIndex;
+        }
+
+
+        // Helper method to extract byte array from hex dump based on address
+        private byte[] GetSelectedBytesFromHexDump(int startAddress, int length, int fromLine, int toLine)
+        {
+            byte[] result = new byte[length];
+            int resultIndex = 0;
+
+            for (int lineIndex = fromLine; lineIndex <= toLine; lineIndex++)
+            {
+                string line = richTextBoxHexDump.Lines[lineIndex];
+                if (line.Length < 17)
+                    continue;
+
+                if (!int.TryParse(line.Substring(0, 16), System.Globalization.NumberStyles.HexNumber, null, out int lineAddress))
+                    continue;
+
+                if (startAddress >= lineAddress + 16 || startAddress + length <= lineAddress)
+                    continue;
+
+                string[] parts = line.Substring(17).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                for (int i = 0; i < parts.Length && i < 16; i++)
+                {
+                    int currentAddress = lineAddress + i;
+                    if (currentAddress >= startAddress && currentAddress < startAddress + length)
+                    {
+                        if (byte.TryParse(parts[i], System.Globalization.NumberStyles.HexNumber, null, out byte b))
+                        {
+                            result[resultIndex++] = b;
+                            if (resultIndex == length)
+                                return result;
+                        }
+                    }
+                }
+            }
+
+            return resultIndex == length ? result : null;
+        }
+
+
         private void JumpToAddressOnDeviceToolStripMenuItem(PhysicalDevice device, string addressHex)
         {
             // Normalize and validate input
@@ -257,19 +503,36 @@ namespace DeviceDump
             {
                 clickedItem.Checked = true;
 
-                DeviceHexDumper dumper = new DeviceHexDumper(device);
+                Dumper = new DeviceHexDumper(device);
                 try
                 {
                     // Open the device.
                     OpenClosePhysicalDevice(true, device);
 
-                    AddDumpsToHexDump(dumper.ReadHexFromDevice(0, 512));
+
+                    // Show loading form (non-blocking)
+                    LoadingForm form = new LoadingForm(this,"Loading hex dump file...");
+                    form.Show(this); // Non-blocking
+
+                    AddDumpsToHexDump(Dumper.ReadHexFromDevice(true, 0, 512));
+
+
 
                     // Update frontend.
                     UpdateSelectedDevice(device);
 
                     // Immediately close the device after reading -> so it can be used again.
                     OpenClosePhysicalDevice(false, SelectedPhysicalDevice);
+
+                    // Close the loading form (safely from UI thread)
+                    if (form.InvokeRequired)
+                    {
+                        form.Invoke(new Action(() => form.Close()));
+                    }
+                    else
+                    {
+                        form.Close();
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -323,21 +586,31 @@ namespace DeviceDump
 
 
         // Decides if the hex dump should be appended or replaced based on the number of bytes read.
-        private void AddDumpsToHexDump(List<string> newDumps)
+        // Decides if the hex dump should be appended or replaced based on the number of bytes read.
+        private async void AddDumpsToHexDump(string hexDumpFilePath)
         {
-            if (SelectedPhysicalDevice == null || SelectedPhysicalDevice.BytesRead <= 0)
+            if (string.IsNullOrEmpty(hexDumpFilePath) || !File.Exists(hexDumpFilePath))
             {
-                richTextBoxHexDump.Text = string.Join(Environment.NewLine, newDumps);
+                richTextBoxHexDump.Text = string.Empty;
+                return;
             }
-            else if (SelectedPhysicalDevice != null && SelectedPhysicalDevice.BytesRead > 0)
-            {
-                string text = richTextBoxHexDump.Text;
-                text += "\n";
-                text += string.Join(Environment.NewLine, newDumps);
 
-                richTextBoxHexDump.Text = text;
-            }
+            // Load the file on background thread
+            string[] allLines = await Task.Run(() =>
+            {
+                return File.ReadAllLines(hexDumpFilePath);
+            });
+
+            // Update the UI
+            richTextBoxHexDump.SuspendLayout();
+            richTextBoxHexDump.Text = string.Join(Environment.NewLine, allLines);
+            richTextBoxHexDump.ResumeLayout();
         }
+
+
+
+
+
 
         private void ProcessReadBytesInput(ulong value)
         {
@@ -350,15 +623,26 @@ namespace DeviceDump
                 // Open the device.
                 OpenClosePhysicalDevice(true, SelectedPhysicalDevice);
 
-                // Create a new DeviceHexDumper instance.
-                DeviceHexDumper dumper = new DeviceHexDumper(SelectedPhysicalDevice);
+                // Show loading form (non-blocking)
+                LoadingForm form = new LoadingForm(this,"Loading hex dump file...");
+                form.Show(this); // Non-blocking
 
                 // Read the specified number of bytes from the device.
-                AddDumpsToHexDump(dumper.ReadHexFromDevice(SelectedPhysicalDevice.BytesRead > 0 ? (int)SelectedPhysicalDevice.BytesRead : 0, (int)bytes));
+                AddDumpsToHexDump(Dumper.ReadHexFromDevice(false, SelectedPhysicalDevice.BytesRead > 0 ? (int)SelectedPhysicalDevice.BytesRead : 0, (int)bytes));
 
                 UpdateSelectedDevice(SelectedPhysicalDevice);
 
                 OpenClosePhysicalDevice(false, SelectedPhysicalDevice);
+
+                // Close the loading form (safely from UI thread)
+                if (form.InvokeRequired)
+                {
+                    form.Invoke(new Action(() => form.Close()));
+                }
+                else
+                {
+                    form.Close();
+                }
             }
             catch (Exception ex)
             {
@@ -368,6 +652,10 @@ namespace DeviceDump
 
         }
         #endregion
+
+
+        
+
 
     }
 }
