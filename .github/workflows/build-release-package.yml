@@ -7,35 +7,7 @@ on:
     branches: [ "master" ]
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        configuration: [Debug, Release]
-    runs-on: windows-latest
-
-    env:
-      Solution_Name: DeviceDump.sln
-
-    steps:
-    - name: Checkout source code
-      uses: actions/checkout@v4
-
-    - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
-
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v2
-
-    - name: Restore NuGet packages
-      run: msbuild $env:Solution_Name /t:Restore /p:Configuration=${{ matrix.configuration }}
-
-    - name: Build solution - ${{ matrix.configuration }}
-      run: msbuild $env:Solution_Name /p:Configuration=${{ matrix.configuration }}
-
   build-and-release:
-    needs: build
     runs-on: windows-latest
 
     env:
@@ -90,4 +62,4 @@ jobs:
         name: Release v${{ steps.get_version.outputs.version }}
         files: ${{ steps.create_zip.outputs.zip }}
       env:
-        GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
