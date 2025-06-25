@@ -1,0 +1,93 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        configuration: [Debug, Release]
+    runs-on: windows-latest
+
+    env:
+      Solution_Name: DeviceDump.sln
+
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Restore NuGet packages
+      run: msbuild $env:Solution_Name /t:Restore /p:Configuration=${{ matrix.configuration }}
+
+    - name: Build solution - ${{ matrix.configuration }}
+      run: msbuild $env:Solution_Name /p:Configuration=${{ matrix.configuration }}
+
+  build-and-release:
+    needs: build
+    runs-on: windows-latest
+
+    env:
+      Solution_Name: DeviceDump.sln
+      Build_Configuration: Release
+      Output_Dir: build_output
+
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Restore NuGet packages
+      run: msbuild $env:Solution_Name /t:Restore /p:Configuration=$env:Build_Configuration
+
+    - name: Build solution
+      run: msbuild $env:Solution_Name /p:Configuration=$env:Build_Configuration /p:OutDir=$env:Output_Dir\\
+
+    - name: Get version from .csproj
+      id: get_version
+      run: |
+        $proj = Get-Content -Raw -Path $(Get-ChildItem -Recurse -Filter *.csproj | Select-Object -First 1)
+        if ($proj -match '<Version>(.*?)</Version>') {
+          echo "VERSION=$($matches[1])" >> $env:GITHUB_ENV
+          echo "::set-output name=version::$($matches[1])"
+        } else {
+          echo "No version found in .csproj"
+          exit 1
+        }
+      shell: pwsh
+
+    - name: Create ZIP package
+      id: create_zip
+      run: |
+        $zipPath = "release-${{ steps.get_version.outputs.version }}.zip"
+        Compress-Archive -Path "$env:Output_Dir\*" -DestinationPath $zipPath
+        echo "ZIP_PATH=$zipPath" >> $env:GITHUB_ENV
+        echo "::set-output name=zip::$zipPath"
+      shell: pwsh
+
+    - name: Create GitHub Release and Upload Asset
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ steps.get_version.outputs.version }}
+        name: Release v${{ steps.get_version.outputs.version }}
+        files: ${{ steps.create_zip.outputs.zip }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
